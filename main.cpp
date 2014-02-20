@@ -17,22 +17,26 @@
  */
 
 
+#include <algorithm>
+#include <cerrno>   // error information
+#include <cstdlib>
+#include <cstring>  // strerror
+#include <ctime>
+#include <fstream>
 #include <iostream>
-#include <vector>
 #include <list>
 #include <map>
-#include <fstream>
-#include <cstdlib>
-#include <algorithm>
 #include <sstream>
+#include <stdexcept>
+#include <vector>
 
+#include <dirent.h> // directory operation
 #include <unistd.h> // parsing argument
 #include <sys/stat.h>   // mkdir and access
-#include <dirent.h> // directory operation
-#include <cerrno>   // error information
-#include <cstring>  // strerror
-#include <stdexcept>
-#include <ctime>
+
+#include "class.h"
+#include "common.h"
+#include "algorithm2.h"
 
 using namespace std;
 
@@ -101,7 +105,6 @@ int create_dir(const string&  dirName)
   return 0;
 }
 
-
 int main(int argc, char**argv)
 {
   // parsing argument
@@ -118,7 +121,7 @@ int main(int argc, char**argv)
   string out_nurd_name;
   string out_expr_name;
 
-  int anno_choice = 0; // choice of annotation: 0: gtf, 1: refflat.
+  int anno_choice = 2; // choice of annotation: 1: refflat, 2: GTF
   double alpha = 0.5; // weight of GBC and LBC. 0.5 as default.
 
   try
@@ -166,7 +169,8 @@ int main(int argc, char**argv)
     //situation 4: -R is specified, but no refflat file.
     if( argu_parse_result.find("R") != argu_parse_result.end() )
     {
-      in_anno.open(argu_parse_result["R"].c_str());
+      in_anno_name = argu_parse_result["R"];
+      in_anno.open(in_anno_name.c_str());
       if(!in_anno.is_open()){
         throw runtime_error("can not open refflat file! Please check whether there exists the refflat file you specified.");
       }
@@ -175,7 +179,8 @@ int main(int argc, char**argv)
     //situation 5: -G is specified, but no gtf file.
     if( argu_parse_result.find("G") != argu_parse_result.end() )
     {
-      in_anno.open(argu_parse_result["G"].c_str());
+      in_anno_name = argu_parse_result["G"];
+      in_anno.open(in_anno_name.c_str());
       if(!in_anno.is_open()){
         throw runtime_error("can not open gtf file! Please check whether there exists the gtf file you specified.");
       }
@@ -189,7 +194,8 @@ int main(int argc, char**argv)
     }
     else
     {
-      in_rdmap.open(argu_parse_result["S"].c_str());
+      in_rdmap_name = argu_parse_result["S"];
+      in_rdmap.open(in_rdmap_name.c_str());
       if(!in_rdmap.is_open()){
         throw runtime_error("can not open sam file! Please check whether there exists the sam file you specified.");
       }
@@ -214,4 +220,67 @@ int main(int argc, char**argv)
     usage();
     return 1;
   }
+
+  stringstream ss (stringstream::in | stringstream::out);
+  std_output_with_time(string("expression estimation start!\n"));
+
+  clock_t start_time, end_time;
+  start_time=clock();
+
+  //get the file names.
+  int flag = 0;
+  string in_rdmap_name_no_dir = get_file_name(in_rdmap_name, flag);
+  if(flag != 0){
+    cerr << "Invalid sam file name!" << endl;
+    return 1;
+  }
+
+  out_nurd_name = argu_parse_result["O"] + in_rdmap_name_no_dir + ".nurd";
+  std_output_with_time("sam file:\t" + out_nurd_name + "\n");
+  out_expr_name = out_nurd_name + ".all_expr";
+  std_output_with_time("expression file:\t" + out_expr_name + "\n");
+
+
+  try{
+    out_nurd.open(out_nurd_name.c_str());
+    if(!out_nurd.is_open()){
+      throw runtime_error("can not open nurd file! Please check whether there exists the nurd file.");
+    }
+  }
+  catch(runtime_error err){
+    cerr << "Exception catched:" << "\t";
+    cerr << err.what() << endl << endl;
+    return 1;
+  }
+
+  map<string, gene_anno> map_g_anno;
+  get_anno_info(in_anno, anno_choice, map_g_anno);
+
+  cout << "number of genes with anno:" << map_g_anno.size() << endl;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
