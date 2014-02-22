@@ -34,7 +34,7 @@
 #include <unistd.h> // parsing argument
 #include <sys/stat.h>   // mkdir and access
 
-#include "class.h"
+#include "class2.h"
 #include "common.h"
 #include "algorithm2.h"
 
@@ -253,10 +253,10 @@ int main(int argc, char**argv)
     return 1;
   }
 
-  map<string, gene_anno> map_g_anno;
-  get_anno_info(in_anno, anno_choice, map_g_anno);
+  map<string, gene_info> map_g_info;
+  get_anno_info(in_anno, anno_choice, map_g_info);
 
-  cout << "number of genes with anno:" << map_g_anno.size() << endl;
+  cout << "number of genes with anno:" << map_g_info.size() << endl;
 
 
 

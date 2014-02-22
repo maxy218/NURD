@@ -5,7 +5,7 @@
 #include <string>
 using namespace std;
 
-extern const double epsilon;
+extern const double EPSILON;
 extern const double maxFloat;
 extern const int max_iteration;
 

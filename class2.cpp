@@ -27,170 +27,59 @@
 #include <map>
 #include "common.h"
 #include "someGlobal.h"
-#include "class.h"
+#include "class2.h"
 using namespace std;
 
-//gene class represent the real gene information
-gene::gene(){} // do nothing. Don't caculate based on the object initialized by default constructor.
-
-gene::gene(const gene& _g){
-  M = _g.M;
-  N = _g.N;
-
-  w = _g.w;
-  ifValid = _g.ifValid;
-
-  l = vector<int>(N);
-  x = vector<int>(N);
-  iso_name = vector<string>(M);
-  iso_len = vector<int>(M);
-  theta = vector<double>(M);
-  a = vector<double>(M*N);
-  c = vector<double>(M*N);
-  GBC = vector<double>(M*N);
-  LBC = vector<double>(M*N);
-
-  for(int j = 0; j < N; j++){
-    l[j] = _g.l[j];
-    x[j] = _g.x[j];
-  }
-
-  for(int i = 0; i < M; i++){
-
-    iso_len[i] = _g.iso_len[i];
-    iso_name[i] = _g.iso_name[i];
-    theta[i] = _g.theta[i];
-
-    for(int j = 0; j < N; j++){
-      a[i*N+j] = _g.a[i*N+j];
-      c[i*N+j] = _g.c[i*N+j];
-      GBC[i*N+j] = _g.GBC[i*N+j];
-      LBC[i*N+j] = _g.LBC[i*N+j];
-    }
-  }
+//should be deleted.
+bool gene_info::getGeneData(ifstream& infile){
+  
 }
 
-gene::gene(
-    string _gene_name,
-    int _N,
-    int _M,
-    int _w,//total read number
-    const vector<string>& _isoform_name,//maybe there are multiple isoforms from one gene
-    const vector<int>& _l,
-    const vector<int>& _x,
-    const vector<double>& _a,//0-1 matrix
-    const vector<double>& _c,//float matrix. used in calculation, can be 0-1 matrix or GBC or LBC or the mixture of GBC or LBC
 
-    const vector<double>& _GBC,
-    const vector<double>& _LBC,
-    const vector<int>& _isoform_length,
+//gene_info: constructor functions
+gene_info::gene_info(){} // do nothing. Don't caculate based on the object initialized by default constructor.
 
-    const vector<double>& _theta,
-    int _ifValid
-  )
-{
-  gene_name = _gene_name;
-  M = _M;
-  N = _N;
-  w = _w;
-  ifValid = _ifValid;
+//assignment member-by-member
+//  when we are assigning the container-type members, maybe smart-pointer is a better choice. 
+gene_info::gene_info(const gene_info& g){
+  iso_num = g.iso_num;
+  exon_num = g.exon_num;
 
-  iso_name = vector<string>(M);
-  iso_len = vector<int>(M);
-  theta = vector<double>(M);
+  gene_name = g.gene_name;
+  iso_name = g.iso_name; // smart pointer maybe is a better choice. 
+  chrom = g.chrom;
+  iso_chrom = g.iso_chrom; // smart pointer maybe is a better choice. 
+  strand = g.strand;
+  iso_strand = g.iso_strand; 
 
-  l = vector<int>(N);
-  x = vector<int>(N);
+  g_start = g.g_start;
+  g_end = g.g_end;
 
-  a = vector<double>(M*N);
-  c = vector<double>(M*N);
-  GBC = vector<double>(M*N);
-  LBC = vector<double>(M*N);
+  exon_iso_idx = g.exon_iso_idx; // smart pointer maybe is a better choice.
+  exon_start_g = g.exon_start_g; // smart pointer maybe is a better choice.
+  exon_end_g = g.exon_end_g; // smart pointer maybe is a better choice.
+  exon_len = g.exon_len; // smart pointer maybe is a better choice.
+  exon_g_start_l = g.exon_g_start_l; // smart pointer maybe is a better choice. 
+  exon_g_start_r = g.exon_g_start_r; // smart pointer maybe is a better choice.
+  exon_g_bound = g.exon_g_bound; // smart pointer maybe is a better choice.
 
-  for(int i = 0; i < M; i++){
-    iso_name[i] = _isoform_name[i];
-    iso_len[i] = _isoform_length[i];
-    theta[i] = _theta[i];
+  g_len = g.g_len;
+  tot_rd_cnt = g.tot_rd_cnt;
+  rd_cnt = g.rd_cnt; // smart pointer maybe is a better choice.
+  GBC = g.GBC; // smart pointer maybe is a better choice.
+  LBC = g.LBC; // smart pointer maybe is a better choice.
+  a = g.a; // smart pointer maybe is a better choice.
+  c = g.c; // smart pointer maybe is a better choice.
 
-    for(int j = 0; j < N; j++){
-      a[i*N+j] = _a[i*N+j];
-      c[i*N+j] = _c[i*N+j];
-      LBC[i*N+j] = _LBC[i*N+j];
-      GBC[i*N+j] = _GBC[i*N+j];
-    }
-  }
-
-  for(int j = 0; j < N; j++){
-    l[j] = _l[j];
-    x[j] = _x[j];
-  }
-}
-
-bool gene::getGeneData(ifstream& infile){
-  string s;
-  if(infile >> s){
-    gene_name = s;
-  }
-  else{
-    return false;
-  }
-  
-  infile >> N;
-  infile >> M;
-  
-  iso_name = vector<string>(M);
-  for(int i = 0; i < M; i++){
-    infile >> s;
-    iso_name[i] = s;
-  }
-
-  l = vector<int>(N);
-  for(int i = 0; i < N; i++){
-    infile >> l[i];
-  }
-
-  x = vector<int>(N);
-  w = 0;
-  for(int i=0;i<N;i++){
-    infile>>x[i];
-    w+=x[i];
-  }
-  
-  a = vector<double>(M*N);
-  c = vector<double>(M*N);// at the beginning, the matrix a and matrix c are same.
-  iso_len = vector<int>(M);
-  GBC = vector<double>(M*N);
-  LBC = vector<double>(M*N);//at the beginning, GBC and LBC are same with matrix a.
-  theta = vector<double>(M);
-  for(int i = 0; i < M; i++){
-    iso_len[i] = 0;
-    for(int j = 0; j < N; j++){
-      infile >> a[i*N+j];
-      LBC[i*N+j] = GBC[i*N+j] = c[i*N+j] = a[i*N+j];
-      if(a[i*N+j] > 0){
-        iso_len[i] += l[j];
-      }
-    }
-  }
-  int minIsoformLength = iso_len[0];
-  for(int i = 0; i < M; i++){
-    if(iso_len[i] < minIsoformLength){
-      minIsoformLength = iso_len[i];
-    }
-  }
-  for(int i = 0; i < M; i++){
-    theta[i] = 1/(double)minIsoformLength;
-  }
-
-  ifValid = this -> judgeIfValid();
-  
-  return true;
+  iso_len = g.iso_len; // smart pointer maybe is a better choice.
+  theta = g.theta; // smart pointer maybe is a better choice.
+  is_valid = g.is_valid;
 }
 
 //0=>valid
 //1=>#read=0
-int gene::judgeIfValid(){
-    if(w <= 0){
+int gene_info::if_valid(){
+    if(tot_rd_cnt <= 0){
         return 1;
     }
     return 0;
@@ -203,62 +92,57 @@ int gene::judgeIfValid(){
 /////////////////////////////////////////////////////////
 
 //default constructor
-isoform_anno::isoform_anno(){
-  g_name = "";
-  name = "";
-  chrom = "";
-  strand = "";
-  txStart = 0;
-  txEnd = 0;
-  cdsStart = 0;
-  cdsEnd = 0;
-  exonCount = 0;
-
-  exonStarts = vector<_chr_coor>(0);
-  exonEnds = vector<_chr_coor>(0);
-}
+isoform_anno::isoform_anno():
+  gene_name (""),
+  name (""),
+  chrom (""),
+  strand (""),
+  tx_start (0),
+  tx_end (0),
+  cds_start (0),
+  cds_end (0),
+  exon_cnt (0),
+  exon_starts ( vector<_chr_coor>(0) ),
+  exon_ends ( vector<_chr_coor>(0) )
+{}
 
 isoform_anno::isoform_anno(int anno_type, string line){
   if(anno_type == 1)// refflat annotation format
   {
     vector<string> str_vec = delimiter(line,'\t');
 
-    g_name = str_vec[0];
+    gene_name = str_vec[0];
     name = str_vec[1];
     chrom = str_vec[2];
     strand = str_vec[3];
-    txStart = atoi((str_vec[4]).c_str());
-    txEnd = atoi((str_vec[5]).c_str());
-    cdsStart = atoi((str_vec[6]).c_str());
-    cdsEnd = atoi((str_vec[7]).c_str());
-    exonCount = atoi((str_vec[8]).c_str());
+    tx_start = atoi((str_vec[4]).c_str());
+    tx_end = atoi((str_vec[5]).c_str());
+    cds_start = atoi((str_vec[6]).c_str());
+    cds_end = atoi((str_vec[7]).c_str());
+    exon_cnt = atoi((str_vec[8]).c_str());
 
     string tmp;
     vector<string>::iterator iter;
 
-    exonStarts = vector<_chr_coor>(exonCount);
-    exonEnds = vector<_chr_coor>(exonCount);
+    exon_starts = vector<_chr_coor>(exon_cnt);
+    exon_ends = vector<_chr_coor>(exon_cnt);
 
     vector<string> pos;
-    pos=delimiter(str_vec[9],',',exonCount);
+    pos = delimiter(str_vec[9], ',', exon_cnt);
     int i = 0;
-    for(iter=pos.begin();iter!=pos.end();iter++){
-      exonStarts[i++] = atoi((*iter).c_str());
+    for(iter=pos.begin(); iter != pos.end(); iter++){
+      exon_starts[i++] = atoi((*iter).c_str());
     }
 
-    pos=delimiter(str_vec[10],',',exonCount);
+    pos = delimiter(str_vec[10], ',', exon_cnt);
     i = 0;
-    for(iter=pos.begin();iter!=pos.end();iter++){
-      exonEnds[i++] = atoi((*iter).c_str());
+    for(iter=pos.begin(); iter != pos.end(); iter++){
+      exon_ends[i++] = atoi((*iter).c_str());
     }
   }
 }
 
-gene_anno::gene_anno(){
-  g_name = "";
-}
-
-bool if_some_state_on(vector<bool>& state){
+bool if_some_state_on(const vector<bool>& state){
   int iso_num = state.size();
   for(int i = 0; i < iso_num; i++){
     if(state[i]){
@@ -270,12 +154,12 @@ bool if_some_state_on(vector<bool>& state){
 
 //the first two para are const, the last four para are the results we want
 void exon_len_split(
-    const vector<vector<int> >& exon_iso_start,
-    const vector<vector<int> >& exon_iso_end,
-    vector<int>& exon_len,
+    const vector<vector<_chr_coor> >& exon_iso_start,
+    const vector<vector<_chr_coor> >& exon_iso_end,
+    vector<_chr_coor>& exon_len,
     vector<vector<int> >& exon_iso_idx,
-    list<int>& list_split_s,
-    list<int>& list_split_e)
+    list<_chr_coor>& list_split_s,
+    list<_chr_coor>& list_split_e)
 {
   list<int> list_s;
   list<int> list_e;
@@ -454,34 +338,31 @@ void exon_len_split(
   //exon indicator done!
 }
 
-gene_anno::gene_anno(list<isoform_anno>& g_set ){
-    list<isoform_anno>::iterator iter_gene = g_set.begin();
+gene_info::gene_info(list<isoform_anno>& iso_list ){
+  list<isoform_anno>::iterator iter_gene = iso_list.begin();
 
-    list<_chr_coor> tmp_list_exon_splited_s;
-    list<_chr_coor> tmp_list_exon_splited_e;
-    list<_chr_coor>::iterator iter_int;
+  list<_chr_coor> tmp_list_exon_splited_s;
+  list<_chr_coor> tmp_list_exon_splited_e;
+  list<_chr_coor>::iterator iter_int;
 
   //use tmp, because there exists exon spliting event
   vector<vector<_chr_coor> > tmp_exon_iso_start;
-    vector<vector<_chr_coor> > tmp_exon_iso_end;
+  vector<vector<_chr_coor> > tmp_exon_iso_end;
 
-    g_name = (*iter_gene).g_name;
-
-  iter_gene = g_set.begin();
-  while(iter_gene != g_set.end()){
-
+  gene_name = (*iter_gene).gene_name;
+  iter_gene = iso_list.begin();
+  while(iter_gene != iso_list.end()){
     vector<_chr_coor>::iterator tmp_iter;
-
     iso_name.push_back((*iter_gene).name);
     chrom = (*iter_gene).chrom;
     iso_chrom.push_back(chrom);
     strand = (*iter_gene).strand;
     iso_strand.push_back(strand);
 
-    tmp_exon_iso_start.push_back((*iter_gene).exonStarts);
-    tmp_exon_iso_end.push_back((*iter_gene).exonEnds);
+    tmp_exon_iso_start.push_back((*iter_gene).exon_starts);
+    tmp_exon_iso_end.push_back((*iter_gene).exon_ends);
     iter_gene++;
-    }
+  }
   iso_num = iso_name.size();
 
   vector<_chr_coor> tmp_exon_g_len;
@@ -526,8 +407,8 @@ gene_anno::gene_anno(list<isoform_anno>& g_set ){
     }
 
     // if neg strand, reverse the exon boundary
-    reverse(exon_start_g.begin(),exon_start_g.end());
-    reverse(exon_end_g.begin(),exon_end_g.end());
+    reverse(exon_start_g.begin(), exon_start_g.end());
+    reverse(exon_end_g.begin(), exon_end_g.end());
   }
 
   g_len = 0;
@@ -550,38 +431,40 @@ gene_anno::gene_anno(list<isoform_anno>& g_set ){
   }
 }
 
-vector<double> getGBC(
-  map<string, list<_chr_coor> > gene_read_pos_map,
-  map<string,gene_anno> gene_anno_map,
+vector<double> get_GBC(
+  map<string, list<_chr_coor> > & gene_read_pos_map,
+  map<string, gene_info> & gene_info_map,
   int num_bins
   )
 {
-  // int num_bins=10;
+  // int num_bins = 10;
   vector<double> GBC(num_bins);
   for(int i = 0; i < num_bins; i++){
     GBC[i] = 0.0;
   }
 
-  int outlier_read_cnt=0;
+  int outlier_read_cnt = 0;
 
-  map<string,gene_anno>::iterator iter_gene_anno;
-  for(iter_gene_anno = gene_anno_map.begin(); iter_gene_anno != gene_anno_map.end(); iter_gene_anno++){
+  map<string, gene_info>::iterator iter_gene_info;
+  for(iter_gene_info = gene_info_map.begin(); iter_gene_info != gene_info_map.end(); iter_gene_info++){
 
-    string g_name = (*iter_gene_anno).first;
+    string gene_name = (*iter_gene_info).first;
 
     //only use the genes with single isoform
-    if((*iter_gene_anno).second.iso_name.size()>=2){
+    if((*iter_gene_info).second.iso_name.size() >= 2){
       continue;
     }
     // should have enough reads, for example larger than 100
-    else if(gene_read_pos_map[ g_name ].size() < 100){
+    else if(gene_read_pos_map[ gene_name ].size() < 100){
       continue;
     }
     else{
       list<int>::iterator iter_pos;
-      int gene_len=(*iter_gene_anno).second.g_len;
+      int gene_len = (*iter_gene_info).second.g_len;
 
-      for(iter_pos = gene_read_pos_map[g_name].begin(); iter_pos != gene_read_pos_map[g_name].end(); iter_pos++){
+      for(iter_pos = gene_read_pos_map[gene_name].begin(); 
+          iter_pos != gene_read_pos_map[gene_name].end(); iter_pos++)
+      {
         if( (*iter_pos) < gene_len && (*iter_pos) >= 0 ){
           GBC[ (int)((*iter_pos)*num_bins)/gene_len ]++;
         }
@@ -605,12 +488,10 @@ vector<double> getGBC(
   return GBC;
 }
 
-
-
 //the following work is to change the return type from bool to int, different return value represent different error type
-bool if_gene_valid(const gene_anno & gene){
+bool if_gene_anno_valid(const gene_info& gene){
   bool if_valid = true;
-  string tmp_g_name = gene.g_name;
+  string tmp_g_name = gene.gene_name;
   int tmp_iso_num = gene.iso_name.size();
 
   //  if there're duplicate isoforms

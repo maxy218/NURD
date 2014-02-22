@@ -1,0 +1,18 @@
+change:
+judgeIfValid => if_valid
+gene_anno and gene => merged into gene_info
+
+add:
+
+
+
+delete:
+getGeneData
+
+
+update in future:
+list => vector, to speed up
+map => hash table, to speed up
+maxFloat => standard lib max float
+merge the if_valid() and is_valid.
+modify the function of get_exon_read_count

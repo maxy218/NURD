@@ -7,7 +7,7 @@
 #include <sstream>
 #include <math.h>
 
-#include "class.h"
+#include "class2.h"
 #include "myData.h"
 #include "someGlobal.h"
 #include "common.h"
@@ -16,18 +16,17 @@ using namespace std;
 
 
 //Linear search with Fabonacci Series
-void max_isoform(gene& ps,int k);
+void max_isoform(gene_info& g,int k);
 
 //binary search
-void max_isoform_bisearch(gene& ps,int k);
+void max_isoform_bisearch(gene_info& g,int k);
 
-double max_likelihood_given_C(gene& ps);
+double max_likelihood_given_C(gene_info& g);
 
 //choice represent the models: 0=>URD, 1=>GN-URD, 2=>MN-URD, 3=>LN-URD, 4=>1-M, 5=>5-M
-double max_likelihood(gene& ps, int choice);
+double max_likelihood(gene_info& g, int choice);
 
 void calcuAllTheGenes(ifstream& infile, ofstream& out, double alpha);
-
 
 
 //return -1 if fail
