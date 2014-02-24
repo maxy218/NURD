@@ -34,9 +34,9 @@
 #include <unistd.h> // parsing argument
 #include <sys/stat.h>   // mkdir and access
 
-#include "class2.h"
+#include "class.h"
 #include "common.h"
-#include "algorithm2.h"
+#include "algorithm.h"
 
 using namespace std;
 
@@ -114,6 +114,7 @@ int main(int argc, char**argv)
   ifstream in_anno; // annotation file.
   ifstream in_rdmap; // reads mapping file.
   ofstream out_nurd; // tmp file. nurd file.
+  ifstream in_nurd; // tmp file. nurd file.
   ofstream out_expr; // expression estimation file.
 
   string in_anno_name;
@@ -258,11 +259,50 @@ int main(int argc, char**argv)
 
   cout << "number of genes with anno:" << map_g_info.size() << endl;
 
+  map<string, vector<int> > gene_rd_cnt;
+  get_exon_rd_cnt(map_g_info, in_rdmap, out_nurd, gene_rd_cnt);
 
 
 
 
+        out_nurd.close();
 
+        //expression estimation
+        try{
+                in_nurd.open(out_nurd_name.c_str());
+                if(! in_nurd){
+                        throw runtime_error("can not open nurd file! Please check whether there exists the nurd file.");
+                }
+        }
+        catch(runtime_error err){
+                cerr<<"Exception catched:"<<"\t";
+                cerr<<err.what()<<endl<<endl;
+                return 1;
+        }
+
+        get_GBC_bin(in_nurd);
+
+        out_expr.open(out_expr_name.c_str());
+
+        time_t esti_start, esti_end;
+        esti_start = clock();
+        calcuAllTheGenes(in_nurd, out_expr, alpha);
+        esti_end = clock();
+
+        ss<<"expression estimation time:\t"<<((double)esti_end-esti_start)/CLOCKS_PER_SEC<<" seconds.\n";
+    std_output_with_time(ss.str());
+    ss.str("");
+
+    ss<<"expression done!"<<endl;
+    std_output_with_time(ss.str());
+    ss.str("");
+
+        end_time = clock();
+    ss << "total time:\t" << ((double)end_time-start_time)/CLOCKS_PER_SEC << " seconds." <<endl;
+    std_output_with_time(ss.str());
+    ss.str("");
+
+    return 0;
 
 
 

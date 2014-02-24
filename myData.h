@@ -7,7 +7,7 @@
 #include <time.h>
 #include <math.h>
 
-#include "class2.h"
+#include "class.h"
 #include "someGlobal.h"
 #include "algorithm.h"
 using namespace std;

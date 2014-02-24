@@ -1,5 +1,24 @@
-#ifndef ALGORITHM_H_INCLUDED
-#define ALGORITHM_H_INCLUDED
+/*
+ * =====================================================================================
+ *
+ *       Filename:  algorithm.h
+ *
+ *    Description:  some algorithms
+ *
+ *        Version:  1.0
+ *        Created:  02/24/2014 11:03:31 PM
+ *       Revision:  none
+ *       Compiler:  g++
+ *
+ *         Author:  Xinyun Ma
+ *   Organization:  Tsinghua University
+ *
+ * =====================================================================================
+ */
+
+
+#ifndef ALGORITHM2_H_INCLUDED
+#define ALGORITHM2_H_INCLUDED
 
 #include <fstream>
 #include <vector>
@@ -7,27 +26,26 @@
 #include <sstream>
 #include <math.h>
 
-#include "class2.h"
+#include "class.h"
 #include "myData.h"
 #include "someGlobal.h"
 #include "common.h"
 
 using namespace std;
 
+void get_anno_info(ifstream& in_anno, const int anno_choice, map<string, gene_info> & map_g_anno);
 
-//Linear search with Fabonacci Series
-void max_isoform(gene_info& g,int k);
+// get the read count of each exon
+int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
+    ofstream & out_nurd, map<string, vector<int> > & gene_rd_cnt);
 
-//binary search
 void max_isoform_bisearch(gene_info& g,int k);
 
 double max_likelihood_given_C(gene_info& g);
 
-//choice represent the models: 0=>URD, 1=>GN-URD, 2=>MN-URD, 3=>LN-URD, 4=>1-M, 5=>5-M
-double max_likelihood(gene_info& g, int choice);
+double max_likelihood(gene_info& g, double alpha);
 
 void calcuAllTheGenes(ifstream& infile, ofstream& out, double alpha);
-
 
 //return -1 if fail
 //else, return the index of x
@@ -35,10 +53,7 @@ void calcuAllTheGenes(ifstream& infile, ofstream& out, double alpha);
 //  n+1 elements represent n intervals, the first elem is 0
 //the interval is left close and right open
 template <class T >
-int my_bin_search(const vector<T>& vec, T x);
-
-//linear search
-int my_lin_search(const vector<int>& vec, int x);
+int bin_search(const vector<T> & vec, const T & x);
 
 // two vector version. It's totally different with the one vector version.
 // one vector version can easily transform into two vector version.
@@ -46,24 +61,20 @@ int my_lin_search(const vector<int>& vec, int x);
 // reference: introduction to the Design and analysis of algorithms(second edition)
 //  related chapter: chapter4. Chinese version, P104
 template <class T >
-int my_bin_search(const vector<T>& vec1, const vector<T>& vec2, T x);
+int bin_search(const vector<T>& vec1, const vector<T>& vec2, const T & x);
 
 // This version is for the array that the element is sorted from large element to small element. The reverse of above
 template <class T >
-int my_bin_search_reverse(const vector<T>& vec1, const vector<T>& vec2, T x);
+int bin_search_reverse(const vector<T>& vec1, const vector<T>& vec2, const T & x);
 
 // two vector and multiple return value version.
 // It's similar with the above binary search version
 // If there are multiple hit, return a list of recode. The list record the index of two vector.
 // If there's no hit, return the null list, whose length is 0.
 template <class T >
-list<int> my_bin_search_multi(const vector<T>& vec1, const vector<T>& vec2, T x);
+list<int> bin_search_multi(const vector<T>& vec1, const vector<T>& vec2, const T & x);
 
+void output_nurd_file_old(ofstream& out_nurd, const vector<double>& GBC, const map<string, gene_info>& map_g_anno, const map<string,vector<int> >& gene_read_count, int total_valid_read_count);
 
-//// haven't judge whether reads have same length.
-int get_read_len(ifstream& in_sam);
-
-// annotype: the type of annotation. 1 -> refflat, 2 -> GTF
-int get_exon_read_count(ifstream& in_refFlat, ifstream& in_sam, ofstream& out_nurd, bool if_chr, int annotype);
 
 #endif // ALGORITHM_H_INCLUDED
