@@ -26,8 +26,7 @@
 #include <math.h>
 
 #include "class.h"
-#include "myData.h"
-#include "someGlobal.h"
+#include "const.h"
 #include "common.h"
 #include "algorithm.h"
 
@@ -39,7 +38,7 @@ void get_anno_refflat(ifstream& in_anno, map<string, list<isoform_anno> >& g_iso
 
   string temp_line;
   while(getline(in_anno, temp_line)){
-    isoform_anno g(1,temp_line); //use refflat format annotation file.
+    isoform_anno g(1, temp_line); //use refflat format annotation file.
     g_iso_anno_map[g.gene_name].push_back(g);
   }
 }
@@ -112,7 +111,8 @@ void get_anno_info(ifstream & in_anno, const int anno_choice, map<string, gene_i
   }
 
   for(iter_g_iso = g_iso_anno_map.begin(); iter_g_iso != g_iso_anno_map.end(); iter_g_iso++){
-    map_g_anno[(*iter_g_iso).first] = gene_info( g_iso_anno_map[(*iter_g_iso).first] );
+    //map_g_anno[(*iter_g_iso).first] = gene_info( g_iso_anno_map[(*iter_g_iso).first] );
+    map_g_anno[(*iter_g_iso).first] = gene_info( iter_g_iso -> second );
   }
 
   iter_map_g_anno = map_g_anno.begin();
@@ -127,62 +127,42 @@ void get_anno_info(ifstream & in_anno, const int anno_choice, map<string, gene_i
 }
 
 // output the data to the nurd file, which is a temporary file.
-void output_nurd_file(ofstream& out_nurd, const vector<double>& GBC, const map<string, gene_info>& map_g_anno, const map<string,vector<int> >& gene_read_count, int total_valid_read_count){
+void output_nurd_file(ofstream& out_nurd, const vector<double>& GBC, const map<string, gene_info>& map_g_anno, int tot_valid_rd_cnt){
   // output GBC curve
-  for(int i = 0; i < GBC.size(); i++){
-    out_nurd << GBC[i] << "\t";
-  }
-  out_nurd << "\n";
+  output_vector<double>(GBC, out_nurd, '\t');
 
   // output valid read number and gene number
-  out_nurd << total_valid_read_count << "\t";
-  out_nurd << map_g_anno.size() << "\n";
+  out_nurd << tot_valid_rd_cnt << '\t';
+  out_nurd << map_g_anno.size() << endl;
 
   // output each gene's detail information
   map<string, gene_info>::const_iterator iter_map_g_anno; // const iterator
-    for(iter_map_g_anno = map_g_anno.begin(); iter_map_g_anno != map_g_anno.end(); iter_map_g_anno++){
-    string tmp_geneName = (*iter_map_g_anno).second.gene_name;
+  for(iter_map_g_anno = map_g_anno.begin(); iter_map_g_anno != map_g_anno.end(); iter_map_g_anno++){
+    string gene_name = (*iter_map_g_anno).second.gene_name;
 
     //output as "nurd" format
     //first line: basic information
-    out_nurd << tmp_geneName << "\t";
-    out_nurd << (*iter_map_g_anno).second.exon_len.size() << "\t";
-    out_nurd << (*iter_map_g_anno).second.iso_name.size() << "\n";
+    out_nurd << gene_name << '\t';
+    out_nurd << (*iter_map_g_anno).second.exon_num << '\t';
+    out_nurd << (*iter_map_g_anno).second.iso_num << endl;
 
     //second line: isoform name
-    for(int i = 0; i < (*iter_map_g_anno).second.iso_name.size(); i++){
-      out_nurd << (*iter_map_g_anno).second.iso_name[i]<<"\t";
-    }
-    out_nurd << "\n";
+    output_vector<string>((*iter_map_g_anno).second.iso_name, out_nurd, '\t');
 
     //third line: exon length
-    const vector<_chr_coor>& tmp_exonLen = (*iter_map_g_anno).second.exon_len;
-    int tmp_exon_num = tmp_exonLen.size();
-    for(int i = 0; i < tmp_exon_num; i++){
-      out_nurd << tmp_exonLen[i] << "\t";
-    }
-    out_nurd << "\n";
+    output_vector<int>((*iter_map_g_anno).second.exon_len, out_nurd, '\t');
+
     //forth line: read count in exon
-    map<string,vector<int> >::const_iterator iter_map_g_rdcnt = gene_read_count.find(tmp_geneName); // rdcnt: short for read count.
-    if(iter_map_g_rdcnt != gene_read_count.end()){
-      for(int i = 0; i < tmp_exon_num; i++){
-        out_nurd << iter_map_g_rdcnt->second[i] << "\t";
-      }
-    }
-    out_nurd << "\n";
-    //other line: gene structure
-    for(int i = 0; i < (*iter_map_g_anno).second.iso_name.size(); i++){
-      for(int j = 0; j < tmp_exon_num; j++){
-        out_nurd << (*iter_map_g_anno).second.exon_iso_idx[i][j] << "\t";
-      }
-      out_nurd << "\n";
-    }
+    output_vector<int>((*iter_map_g_anno).second.rd_cnt, out_nurd, '\t');
+
+    //other lines: gene structure
+    output_2D_vector<int>((*iter_map_g_anno).second.exon_iso_idx, out_nurd, '\t');
   }
 }
 
 // get the read count of each exon
 int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap, 
-    ofstream & out_nurd, map<string, vector<int> > & gene_rd_cnt){
+    size_t & tot_valid_rd_cnt, vector<double> & GBC){
   clock_t start_time,end_time;
   time_t cur_time;
   start_time = clock();
@@ -205,19 +185,12 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
   //gene read count begins
   ////////////////////////////////////////
   /////// read count starts!
-  for(iter_map_g_info = map_g_info.begin(); iter_map_g_info != map_g_info.end(); iter_map_g_info++){
-    gene_rd_cnt[(*iter_map_g_info).first] = vector<int>((*iter_map_g_info).second.exon_num);
-  }
-
-  int total_read_count = 0;
-  int total_valid_read_count = 0;
+  int tot_rd_cnt = 0;
+  tot_valid_rd_cnt = 0;
 
   // bin number in GBC. GBC is calculated at the same time of reads counting.
-  int num_bins = 10;
-  vector<double> GBC(num_bins);
-  for(int i = 0; i < num_bins; i++){
-    GBC[i] = 0.0;
-  }
+  vector<int> int_GBC = vector<int>(GBC_bin_num, 0);
+
   int outlier_read_cnt = 0;
 
   //// first key is chr name, second key is gene start pos, second value is gene name. The first value is a map container.
@@ -296,7 +269,7 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
   vector<string> sam_column = vector<string>(10);
 
   do{
-    total_read_count++;
+    tot_rd_cnt++;
     int invalid_type = 0;//0: valid, 1: not gene region, 2: not exon region 3: multi gene 4: invalid chrome
 
     //extract the map information from sam file
@@ -356,16 +329,16 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
         }
         if(!if_multi_map){
           if(exon_idx != -1){
-            total_valid_read_count++;
+            tot_valid_rd_cnt++;
             int gene_read_pos = -1; // initialized as an invalid position.
             if(map_g_info[g_name].strand == "+"){
-              gene_rd_cnt[g_name][exon_idx]++;
+              map_g_info[g_name].rd_cnt[exon_idx]++;
 
               //for GBC, read pos
               gene_read_pos = map_g_info[g_name].exon_g_start_l[exon_idx] + read_pos - map_g_info[g_name].exon_start_g[exon_idx];
             }
             else{
-              gene_rd_cnt[g_name][exon_idx]++;
+              map_g_info[g_name].rd_cnt[exon_idx]++;
 
               //for GBC, read pos
               // still exon_g_start_l, if you figure out, it's obvious.
@@ -378,10 +351,10 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
             {
               int gene_len = map_g_info[g_name].g_len;
               if( gene_read_pos < gene_len && gene_read_pos >= 0 ){
-                GBC[ (int)(gene_read_pos*num_bins)/gene_len ]++;
+                int_GBC[ (int)(gene_read_pos*GBC_bin_num)/gene_len ]++;
               }
               else if(gene_read_pos == gene_len){
-                GBC[ num_bins-1 ]++;
+                int_GBC[ GBC_bin_num-1 ]++;
               }
               else{
                 outlier_read_cnt++;
@@ -400,11 +373,11 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
   //////////////////////////////////
   //////// get GBC
   double total_GBC = 0;
-  for(int i = 0; i < num_bins; i++){
-    total_GBC += GBC[i];
+  for(int i = 0; i < GBC_bin_num; i++){
+    total_GBC += int_GBC[i];
   }
-  for(int i = 0; i < num_bins; i++){
-    GBC[i] = ((double)GBC[i]*num_bins)/total_GBC;
+  for(int i = 0; i < GBC_bin_num; i++){
+    GBC[i] = ((double)int_GBC[i]*GBC_bin_num)/total_GBC;
   }
   //////////////////////////////////
 
@@ -414,14 +387,21 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
     ss.str("");
     start_time = end_time;
 
+  // update the is_valid information of each gene.
+  for(iter_map_g_info = map_g_info.begin(); iter_map_g_info != map_g_info.end(); ++iter_map_g_info){
+    iter_map_g_info->second.tot_rd_cnt = sum_vector(iter_map_g_info->second.rd_cnt);
+  }
+
+/*
   //output the information to nurd file.
-  output_nurd_file(out_nurd, GBC, map_g_info, gene_rd_cnt, total_valid_read_count);
+  output_nurd_file(out_nurd, GBC, map_g_info, tot_valid_rd_cnt);
+*/
 
   return 0;
 }
 
-void max_isoform_bisearch(gene_info& g,int k){
-  const  double LOCAL_EPSILON = 1e-8;
+void max_isoform_bisearch(gene_info& g, int k){
+  const double LOCAL_EPSILON = 1e-8;
   const double LOCAL_EPSILON_GRADIENT = 1e-8;
   double left, right;
 
@@ -474,6 +454,10 @@ void max_isoform_bisearch(gene_info& g,int k){
   }
 }
 
+
+ofstream out_theta;
+
+
 double max_likelihood_given_C(gene_info& g){
   int M = g.iso_num;
 
@@ -484,6 +468,7 @@ double max_likelihood_given_C(gene_info& g){
     for(int i = 0; i < M; i++){
       max_isoform_bisearch(g, i);
     }
+
     double new_f_value = get_log_likelihood(g);
     if(fabs(new_f_value - f_value) < EPSILON){
       return new_f_value;
@@ -500,15 +485,14 @@ double max_likelihood_given_C(gene_info& g){
   return f_value;
 }
 
-double max_likelihood(gene_info& g, double alpha){
-  bool if_nurd = true;//defualt is true, unless the choice is 0
+double max_likelihood(gene_info& g, double alpha, const vector<double> & GBC){
   int iteration = 0;//means the total number of iterate;
   int iter = 0;   //represent the current number of iterate;
 
   double f_value = get_log_likelihood(g);
   double new_f_value = 0.0;
 
-  get_GBC_matrix(g);
+  get_GBC_matrix(g, GBC);
 
   do{
     get_LBC_matrix(g);
@@ -529,23 +513,189 @@ double max_likelihood(gene_info& g, double alpha){
   return f_value;
 }
 
-void calcuAllTheGenes(ifstream& infile, ofstream& out, double alpha){
-  int buf_size = 4096;
-  char buf[buf_size];
+double get_log_likelihood(const gene_info& g){
+  int N = g.exon_num;
+  int M = g.iso_num;
 
-  int totalRead;
-  infile >> totalRead;
-  int totalGeneNum;
-  infile >> totalGeneNum;
+  double likeli = 0.0;
 
-  string s;
-  while(true){
-    gene_info g;
-
-    // should be deleted of the funcion: g.getGeneData
-    if( !g.getGeneData(infile) ){ // get the data for gene g.
-      break;
+  for(int j = 0; j < N; j++){
+    double tempSum1 = 0.0;
+    double tempSum2 = 0.0;
+    for(int i = 0; i < M; i++){
+      double tmp_double = 0.0;
+      tmp_double = g.c[i*N+j] * g.theta[i];
+      tempSum1 += g.exon_len[j] * tmp_double;
+      tempSum2 += tmp_double;
     }
+    likeli = likeli - g.tot_rd_cnt*tempSum1 + g.rd_cnt[j]*log(g.exon_len[j]*g.tot_rd_cnt*tempSum2+EPSILON);
+  }
+
+  return likeli;
+}
+
+double get_gradient_of_log_likelihood(const gene_info& g, int i){
+  int N = g.exon_num;
+  int M = g.iso_num;
+
+  double gradient = 0.0;
+  for(int j = 0; j < N; j++){
+    gradient -= g.tot_rd_cnt*g.exon_len[j]*g.c[i*N+j];
+    if(g.rd_cnt[j]*g.c[i*N+j] != 0)
+    {
+      double tmp_sum = EPSILON;
+      for(int k = 0; k < M; k++)
+      {
+        tmp_sum += g.c[k*N+j]*g.theta[k];
+      }
+      gradient += g.rd_cnt[j]*g.c[i*N+j]/tmp_sum;
+    }
+  }
+  return gradient;
+}
+
+void get_LBC_curve(gene_info& g, vector<double>& LBC){
+  int M = g.iso_num;
+  int N = g.exon_num;
+
+  double tempSum = 0.0;
+  double LBC_sum = 0.0;
+  for(int j = 0; j < N; j++){
+    tempSum = 0.0;
+    for(int i = 0; i < M; i++){
+      tempSum += g.theta[i]*g.a[i*N+j];
+    }
+    if(tempSum < EPSILON){
+      tempSum += EPSILON;
+    }
+    LBC[j] = g.rd_cnt[j]/(g.exon_len[j]*tempSum);
+    LBC_sum += LBC[j];
+  }
+
+  for(int j = 0; j < N; j++){
+    LBC[j] = LBC[j]*N/LBC_sum;
+  }
+}
+
+void get_LBC_matrix(gene_info& g){
+  int M = g.iso_num;
+  int N = g.exon_num;
+
+  vector<double> LBC = vector<double>(N);
+  get_LBC_curve(g, LBC);
+
+  vector<int> new_len = vector<int>(N);
+  int new_tot_len = 0;
+
+  for(int j = 0; j < N; j++){
+    new_len[j] = 0;
+    for(int i = 0; i < M; i++){
+      new_len[j] += (int)g.a[i*N+j];
+    }
+    new_len[j] *= g.exon_len[j];
+    new_tot_len += new_len[j];
+  }
+
+  vector<double> newLBC = vector<double>(new_tot_len);
+  int curPos = 0;
+  for(int j = 0; j < N; j++){
+    for(int subj = 0; subj < new_len[j]; subj++){
+      newLBC[curPos+subj] = LBC[j];
+    }
+    curPos += new_len[j];
+  }
+
+  double tempSum = 0.0;
+  for(int j = 0; j < new_tot_len; j++){
+    tempSum += newLBC[j];
+  }
+  for(int j = 0; j < new_tot_len; j++){
+    newLBC[j] = newLBC[j]*new_tot_len/tempSum;
+  }
+
+  vector<double> temp = vector<double>(N);
+  vector<int> temp_length = vector<int>(N);
+  int gene_length = 0;
+  for(int j = 0; j < N; j++){
+    gene_length += g.exon_len[j];
+  }
+
+  for(int i = 0; i < M; i++){
+    for(int j = 0; j < N; j++){
+      temp_length[j] = g.exon_len[j]*(int)g.a[i*N+j];
+    }
+
+    get_Curve_from_bin(newLBC, new_tot_len, temp_length, N, temp);
+
+    for(int j = 0; j < N; j++){
+      g.LBC[i*N+j] = temp[j]*bin_N/new_tot_len;
+    }
+  }
+}
+
+void get_GBC_matrix(gene_info& g, const vector<double> & GBC){
+  int M = g.iso_num;
+  int N = g.exon_num;
+  vector<double> temp = vector<double>(N);
+  vector<int> temp_length = vector<int>(N);
+
+  for(int i = 0; i < M; i++){
+    for(int j = 0; j < N; j++){
+      temp_length[j] = g.exon_len[j]*(int)g.a[i*N+j];
+    }
+    get_Curve_from_bin(GBC, bin_N, temp_length, N, temp);
+    for(int j = 0; j < N; j++){
+      g.GBC[i*N+j] = temp[j];
+    }
+  }
+}
+
+//N:number of bin
+//exon_N:number of exon
+void get_Curve_from_bin(const vector<double>& bin, int N, const vector<int>& length,
+    int exon_N, vector<double>& Area){
+  vector<double> new_len = vector<double>(exon_N);
+
+  int total_Length = 0;
+  for(int i = 0; i < exon_N; i++){
+    total_Length += length[i];
+  }
+  for(int i = 0; i < exon_N; i++){
+    new_len[i] = (double)length[i]/total_Length*N;
+  }
+
+  double left_coor = 0.0;
+  double right_coor = new_len[0];
+
+  double temp_pos = left_coor;
+  double delta = 0;
+  for(int i = 0; i < exon_N; i++){
+    Area[i] = 0.0;
+
+    while(right_coor > temp_pos){
+      delta = min(((int)(temp_pos+1)-temp_pos), right_coor-temp_pos);
+      Area[i] += delta * bin[(int)temp_pos];
+      temp_pos += delta;
+    }
+
+    if(fabs(new_len[i]) < EPSILON){
+      Area[i] = 0;
+    }
+
+    if(i < exon_N-1){
+      left_coor += new_len[i];
+      right_coor += new_len[i+1];
+    }
+  }
+}
+
+void calcuAllTheGenes(map<string, gene_info> & map_g_info, 
+    size_t tot_valid_rd_cnt, double alpha, const vector<double> & GBC, ofstream& out){
+  map<string, gene_info>::iterator iter_map_g_info = map_g_info.begin();
+  for(; iter_map_g_info != map_g_info.end(); ++iter_map_g_info){
+    gene_info & g = iter_map_g_info -> second;
+
+    g.is_valid = g.if_valid();
 
     if(g.is_valid == 1){
       out << g.gene_name << "\t" << g.iso_num << "\t" << g.tot_rd_cnt << "\t";
@@ -567,13 +717,13 @@ void calcuAllTheGenes(ifstream& infile, ofstream& out, double alpha){
       out << "\t";
 
     //////  expression estimation
-      max_likelihood(g,alpha);
+      max_likelihood(g, alpha, GBC);
       double totalTheta = 0.0;
       for(int ii = 0; ii < g.iso_num; ii++){
-        out << g.theta[ii]*g.tot_rd_cnt/totalRead*1e9 << ",";
+        out << g.theta[ii]*g.tot_rd_cnt/tot_valid_rd_cnt*1e9 << ",";
         totalTheta += g.theta[ii];
       }
-      out << "\t" << totalTheta*g.tot_rd_cnt/totalRead*1e9;
+      out << "\t" << totalTheta*g.tot_rd_cnt/tot_valid_rd_cnt*1e9;
       out << "\n";
     }
   }
@@ -727,58 +877,5 @@ list<int> bin_search_multi(const vector<T>& vec1, const vector<T>& vec2, const T
   }
   result.sort();
   return result;
-}
-
-void output_nurd_file_old(ofstream& out_nurd, const vector<double>& GBC, const map<string, gene_info>& map_g_anno, const map<string,vector<int> >& gene_read_count, int total_valid_read_count){
-  // output GBC curve
-  for(int i = 0; i < GBC.size(); i++){
-    out_nurd << GBC[i] << "\t";
-  }
-  out_nurd << "\n";
-
-  // output valid read number and gene number
-  out_nurd << total_valid_read_count << "\t";
-  out_nurd << map_g_anno.size() << "\n";
-
-  // output each gene's detail information
-  map<string, gene_info>::const_iterator iter_map_g_anno; // const iterator
-    for(iter_map_g_anno = map_g_anno.begin(); iter_map_g_anno != map_g_anno.end(); iter_map_g_anno++){
-    string tmp_geneName = (*iter_map_g_anno).second.gene_name;
-
-    //output as "nurd" format
-    //first line: basic information
-    out_nurd << tmp_geneName << "\t";
-    out_nurd << (*iter_map_g_anno).second.exon_len.size() << "\t";
-    out_nurd << (*iter_map_g_anno).second.iso_name.size() << "\n";
-
-    //second line: isoform name
-    for(int i = 0; i < (*iter_map_g_anno).second.iso_name.size(); i++){
-      out_nurd << (*iter_map_g_anno).second.iso_name[i]<<"\t";
-    }
-    out_nurd << "\n";
-
-    //third line: exon length
-    const vector<_chr_coor>& tmp_exonLen = (*iter_map_g_anno).second.exon_len;
-    int tmp_exon_num = tmp_exonLen.size();
-    for(int i = 0; i < tmp_exon_num; i++){
-      out_nurd << tmp_exonLen[i] << "\t";
-    }
-    out_nurd << "\n";
-    //forth line: read count in exon
-    map<string,vector<int> >::const_iterator iter_map_g_rdcnt = gene_read_count.find(tmp_geneName); // rdcnt: short for read count.
-    if(iter_map_g_rdcnt != gene_read_count.end()){
-      for(int i = 0; i < tmp_exon_num; i++){
-        out_nurd << iter_map_g_rdcnt->second[i] << "\t";
-      }
-    }
-    out_nurd << "\n";
-    //other line: gene structure
-    for(int i = 0; i < (*iter_map_g_anno).second.iso_name.size(); i++){
-      for(int j = 0; j < tmp_exon_num; j++){
-        out_nurd << (*iter_map_g_anno).second.exon_iso_idx[i][j] << "\t";
-      }
-      out_nurd << "\n";
-    }
-  }
 }
 

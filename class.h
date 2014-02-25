@@ -29,7 +29,7 @@
 #include <algorithm>
 #include <map>
 #include "common.h"
-#include "someGlobal.h"
+#include "const.h"
 using namespace std;
 
 struct isoform_anno{
@@ -121,11 +121,13 @@ void exon_len_split(
     list<_chr_coor>& list_split_s,
     list<_chr_coor>& list_split_e);
 
+/*
 vector<double> get_GBC(
   map<string, list<_chr_coor> > & gene_read_pos_map,
   map<string, gene_info> & gene_info_map,
   int num_bins
   );
+*/
 
 //the following work is to change the return type from bool to int, different return value represent different error type
 bool if_gene_anno_valid(const gene_info& gene);

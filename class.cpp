@@ -26,74 +26,9 @@
 #include <algorithm>
 #include <map>
 #include "common.h"
-#include "someGlobal.h"
+#include "const.h"
 #include "class.h"
 using namespace std;
-
-//should be deleted.
-bool gene_info::getGeneData(ifstream& infile){
-        string s;
-        if(infile >> s){
-                gene_name = s;
-        }
-        else{
-                return false;
-        }
-
-        infile >> exon_num;
-        infile >> iso_num;
-        int N = exon_num;
-        int M = iso_num;
-
-        iso_name = vector<string>(M);
-        for(int i = 0; i < M; i++){
-                infile >> s;
-                iso_name[i] = s;
-        }
-
-        exon_len = vector<int>(N);
-        for(int i = 0; i < N; i++){
-                infile >> exon_len[i];
-        }
-
-        rd_cnt = vector<int>(N);
-        tot_rd_cnt = 0;
-        for(int i=0;i<N;i++){
-                infile>>rd_cnt[i];
-                tot_rd_cnt += rd_cnt[i];
-        }
-
-        a = vector<double>(M*N);
-        c = vector<double>(M*N);// at the beginning, the matrix a and matrix c are same.
-        iso_len = vector<int>(M);
-        GBC = vector<double>(M*N);
-        LBC = vector<double>(M*N);//at the beginning, GBC and LBC are same with matrix a.
-        theta = vector<double>(M);
-        for(int i = 0; i < M; i++){
-                iso_len[i] = 0;
-                for(int j = 0; j < N; j++){
-                        infile >> a[i*N+j];
-                        LBC[i*N+j] = GBC[i*N+j] = c[i*N+j] = a[i*N+j];
-                        if(a[i*N+j] > 0){
-                                iso_len[i] += exon_len[j];
-                        }
-                }
-        }
-        int minIsoformLength = iso_len[0];
-        for(int i = 0; i < M; i++){
-                if(iso_len[i] < minIsoformLength){
-                        minIsoformLength = iso_len[i];
-                }
-        }
-        for(int i = 0; i < M; i++){
-                theta[i] = 1/(double)minIsoformLength;
-        }
-
-        is_valid = this -> if_valid();
-
-        return true;
-}
-
 
 //gene_info: constructor functions
 gene_info::gene_info(){} // do nothing. Don't caculate based on the object initialized by default constructor.
@@ -397,9 +332,10 @@ void exon_len_split(
   //exon indicator done!
 }
 
+
+
 gene_info::gene_info(list<isoform_anno>& iso_list ){
   list<isoform_anno>::iterator iter_gene = iso_list.begin();
-
   list<_chr_coor> tmp_list_exon_splited_s;
   list<_chr_coor> tmp_list_exon_splited_e;
   list<_chr_coor>::iterator iter_int;
@@ -409,6 +345,7 @@ gene_info::gene_info(list<isoform_anno>& iso_list ){
   vector<vector<_chr_coor> > tmp_exon_iso_end;
 
   gene_name = (*iter_gene).gene_name;
+
   iter_gene = iso_list.begin();
   while(iter_gene != iso_list.end()){
     vector<_chr_coor>::iterator tmp_iter;
@@ -488,8 +425,41 @@ gene_info::gene_info(list<isoform_anno>& iso_list ){
       exon_g_start_r[i] = exon_g_start_r[i-1] + exon_len[exon_num-i];
     }
   }
+
+  // initialize the vector members of gene_info
+  rd_cnt = vector<int>(exon_num, 0);
+
+  iso_len = vector<_chr_coor>(iso_num, 0);
+  for(size_t i = 0; i < iso_num; ++i){
+    for(size_t j = 0; j < exon_num; ++j){
+      iso_len[i] += exon_iso_idx[i][j]*exon_len[j];
+    }
+  }
+
+  a = vector<double>(iso_num * exon_num, 0.0);
+  for(size_t i = 0; i < iso_num; ++i){
+    for(size_t j = 0; j < exon_num; ++j){
+      a[i* exon_num + j] = exon_iso_idx[i][j];
+    }
+  }
+  c = GBC = LBC = a;
+
+  int min_iso_len = iso_len[0];
+  for(size_t i = 1; i < iso_num; ++i){
+    if(iso_len[i] < min_iso_len){
+      min_iso_len = iso_len[i];
+    }
+  }
+
+  theta = vector<double>(iso_num, 0.0);
+  for(size_t i = 0; i < iso_num; ++i){
+     theta[i] = 1.0/(double)min_iso_len;
+  }
+
+  // the member of is_valid should be set after get the read counts.
 }
 
+/*
 vector<double> get_GBC(
   map<string, list<_chr_coor> > & gene_read_pos_map,
   map<string, gene_info> & gene_info_map,
@@ -546,32 +516,30 @@ vector<double> get_GBC(
   }
   return GBC;
 }
+*/
 
 //the following work is to change the return type from bool to int, different return value represent different error type
 bool if_gene_anno_valid(const gene_info& gene){
   bool if_valid = true;
-  string tmp_g_name = gene.gene_name;
-  int tmp_iso_num = gene.iso_name.size();
-
   //  if there're duplicate isoforms
   //  sorted list may be not efficient. Maybe hash is faster!
   //  hash: just judge whether every isoform name is new, having no duplicate
-  if(tmp_iso_num > 1){
+  if(gene.iso_num > 1){
     list<string> list_iso_name;
 
-    for(int i = 0; i < tmp_iso_num; i++){
+    for(int i = 0; i < gene.iso_num; i++){
       list_iso_name.push_back(gene.iso_name[i]);
     }
     list_iso_name.sort();
     list_iso_name.unique();
-    if(list_iso_name.size() != tmp_iso_num){
+    if(list_iso_name.size() != gene.iso_num){
       return false;
     }
   }
 
   //if having different orient
-  if(tmp_iso_num > 1){
-    for(int i = 0; i < tmp_iso_num - 1; i++){
+  if(gene.iso_num > 1){
+    for(int i = 0; i < gene.iso_num - 1; i++){
       if(gene.iso_strand[i] != gene.iso_strand[i+1]){
         return false;
       }
@@ -579,8 +547,8 @@ bool if_gene_anno_valid(const gene_info& gene){
   }
 
   //if from different chrome
-  if(tmp_iso_num > 1){
-    for(int i = 0; i < tmp_iso_num - 1; i++){
+  if(gene.iso_num > 1){
+    for(int i = 0; i < gene.iso_num - 1; i++){
       if(gene.iso_chrom[i] != gene.iso_chrom[i+1]){
         return false;
       }
@@ -591,7 +559,7 @@ bool if_gene_anno_valid(const gene_info& gene){
   //delete the isoforms on such chrom: chr6_qbl_hap2
   //method: delimit the chrom column, if there exists "_", then delete it
   size_t found;
-  for(int i = 0; i < tmp_iso_num; i++){
+  for(int i = 0; i < gene.iso_num; i++){
     found = gene.iso_chrom[i].find('_');
     if(found != string::npos){
       return false;

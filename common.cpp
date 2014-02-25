@@ -22,6 +22,7 @@
 #include <cstring>	// strerror
 #include <ctime>
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -140,5 +141,4 @@ void delimiter(vector<string>& t, string str, const char deli, const int N, cons
     t[cur_field++] = str.substr(l_ind, r_ind - l_ind);
   }
 }
-
 

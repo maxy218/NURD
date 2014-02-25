@@ -259,8 +259,10 @@ int main(int argc, char**argv)
 
   cout << "number of genes with anno:" << map_g_info.size() << endl;
 
-  map<string, vector<int> > gene_rd_cnt;
-  get_exon_rd_cnt(map_g_info, in_rdmap, out_nurd, gene_rd_cnt);
+  vector<double> GBC = vector<double>(GBC_bin_num, 0.0);
+
+  size_t tot_valid_rd_cnt = 0;
+  get_exon_rd_cnt(map_g_info, in_rdmap, tot_valid_rd_cnt, GBC);
 
 
 
@@ -280,13 +282,12 @@ int main(int argc, char**argv)
                 return 1;
         }
 
-        get_GBC_bin(in_nurd);
 
         out_expr.open(out_expr_name.c_str());
 
         time_t esti_start, esti_end;
         esti_start = clock();
-        calcuAllTheGenes(in_nurd, out_expr, alpha);
+        calcuAllTheGenes(map_g_info, tot_valid_rd_cnt, alpha, GBC, out_expr);
         esti_end = clock();
 
         ss<<"expression estimation time:\t"<<((double)esti_end-esti_start)/CLOCKS_PER_SEC<<" seconds.\n";
