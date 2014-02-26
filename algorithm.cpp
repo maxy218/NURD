@@ -301,26 +301,26 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
         read_pos += sam_column[9].size();
       }
 
-      list<int> l_gene_index = bin_search_multi(map_chr_start_pos_vec[chrName],map_chr_end_pos_vec[chrName],read_pos);
+      vector<int> vec_gene_idx = bin_search_multi(map_chr_start_pos_vec[chrName],map_chr_end_pos_vec[chrName],read_pos);
 
-      if(l_gene_index.size() == 0){ // if no gene cover the read, deal with the next read
+      if(vec_gene_idx.size() == 0){ // if no gene cover the read, deal with the next read
         continue;
       }
       else{
-        list<int>::iterator tmp_iter_list;
         bool if_map_to_gene = false;
         bool if_multi_map = false;
         int exon_idx = -1;
         string g_name;
-        for(tmp_iter_list = l_gene_index.begin(); tmp_iter_list != l_gene_index.end(); tmp_iter_list++){
-          g_name = map_chr_pos_gene[chrName][ map_chr_start_pos_vec[chrName][(*tmp_iter_list)] ];
+        for(size_t idx = 0; idx < vec_gene_idx.size(); ++idx){
+          g_name = map_chr_pos_gene[chrName][ map_chr_start_pos_vec[chrName][ vec_gene_idx[idx] ] ];
 
-          if(map_g_info[g_name].strand == "+"){
-            exon_idx = bin_search(map_g_info[g_name].exon_start_g, map_g_info[g_name].exon_end_g, read_pos);
+          gene_info & g_info = map_g_info[g_name];
+          if(g_info.strand == "+"){
+            exon_idx = bin_search(g_info.exon_start_g, g_info.exon_end_g, read_pos);
           }
           ///// if on the negtive strand, should use the reverse search
           else{
-            exon_idx = bin_search_reverse(map_g_info[g_name].exon_start_g, map_g_info[g_name].exon_end_g, read_pos);
+            exon_idx = bin_search_reverse(g_info.exon_start_g, g_info.exon_end_g, read_pos);
           }
 
           if(exon_idx!=-1){

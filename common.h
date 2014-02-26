@@ -20,13 +20,13 @@
 #ifndef COMMON_H_INCLUDED
 #define COMMON_H_INCLUDED
 
+#include <algorithm>
 #include <ctime>
 #include <cstdio>
 #include <string>
 #include <vector>
 #include <iostream>
 #include <fstream>
-#include <list>
 
 #include <unistd.h> // parsing argument
 #include <sys/stat.h> 	// mkdir and access 
@@ -182,11 +182,11 @@ int bin_search_reverse(const vector<T>& vec1, const vector<T>& vec2, const T& x)
 // If there are multiple hit, return a list of recode. The list record the index of two vector.
 // If there's no hit, return the null list, whose length is 0.
 template <class T >
-list<int> bin_search_multi(const vector<T>& vec1, const vector<T>& vec2, const T & x){
+vector<int> bin_search_multi(const vector<T>& vec1, const vector<T>& vec2, const T & x){
   int left = 0;
   int right = vec1.size()-1;
   int mid;
-  list<int> result;
+  vector<int> result;
 
   //if x is out of bound, return -1. false
   if(x >= vec2[right] || x < vec1[left]){
@@ -232,7 +232,7 @@ list<int> bin_search_multi(const vector<T>& vec1, const vector<T>& vec2, const T
     }
     mid++;
   }
-  result.sort();
+  sort(result.begin(), result.end());
   return result;
 }
 
