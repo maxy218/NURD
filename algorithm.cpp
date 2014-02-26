@@ -621,6 +621,10 @@ void get_curve_from_hist(const vector<double> & hist_h, const vector<double> & h
   int tot_hist_len = sum_vector(hist_l);
   int tot_len = sum_vector(len);
 
+  for(size_t i = 0; i < len_size; i++){
+    area[i] = 0.0;
+  }
+
   size_t idx1 = 0, idx2 = 0; // idx1: index of hist, idx2: index of len
   double cur_hist_len = hist_l[idx1];
   double cur_len; 
