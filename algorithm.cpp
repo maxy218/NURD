@@ -569,54 +569,28 @@ void get_LBC_matrix(gene_info& g){
   int M = g.iso_num;
   int N = g.exon_num;
 
-  vector<double> LBC = vector<double>(N);
-  get_LBC_curve(g, LBC);
+  vector<double> LBC_h = vector<double>(N, 0.0);
+  vector<double> LBC_l = vector<double>(N, 0.0);
+  get_LBC_curve(g, LBC_h);
 
-  vector<int> new_len = vector<int>(N);
-  int new_tot_len = 0;
+  vector<double> area= vector<double>(N, 0.0);
+  vector<double> len = vector<double>(N, 0);
 
   for(int j = 0; j < N; j++){
-    new_len[j] = 0;
     for(int i = 0; i < M; i++){
-      new_len[j] += (int)g.a[i*N+j];
+      LBC_l[j] += g.exon_iso_idx[i][j];
     }
-    new_len[j] *= g.exon_len[j];
-    new_tot_len += new_len[j];
-  }
-
-  vector<double> newLBC = vector<double>(new_tot_len);
-  int curPos = 0;
-  for(int j = 0; j < N; j++){
-    for(int subj = 0; subj < new_len[j]; subj++){
-      newLBC[curPos+subj] = LBC[j];
-    }
-    curPos += new_len[j];
-  }
-
-  double tempSum = 0.0;
-  for(int j = 0; j < new_tot_len; j++){
-    tempSum += newLBC[j];
-  }
-  for(int j = 0; j < new_tot_len; j++){
-    newLBC[j] = newLBC[j]*new_tot_len/tempSum;
-  }
-
-  vector<double> temp = vector<double>(N);
-  vector<int> temp_length = vector<int>(N);
-  int gene_length = 0;
-  for(int j = 0; j < N; j++){
-    gene_length += g.exon_len[j];
+    LBC_l[j] *= g.exon_len[j];
   }
 
   for(int i = 0; i < M; i++){
     for(int j = 0; j < N; j++){
-      temp_length[j] = g.exon_len[j]*(int)g.a[i*N+j];
+      len[j] = (double)g.exon_len[j]*g.exon_iso_idx[i][j];
     }
-
-    get_Curve_from_bin(newLBC, new_tot_len, temp_length, N, temp);
-
+    get_curve_from_hist(LBC_h, LBC_l, len, area);
+    double tot_area = sum_vector(area);
     for(int j = 0; j < N; j++){
-      g.LBC[i*N+j] = temp[j]*GBC_bin_num/new_tot_len;
+      g.LBC[i*N+j] = area[j] * GBC_bin_num / tot_area;
     }
   }
 }
@@ -624,56 +598,48 @@ void get_LBC_matrix(gene_info& g){
 void get_GBC_matrix(gene_info& g, const vector<double> & GBC){
   int M = g.iso_num;
   int N = g.exon_num;
-  vector<double> temp = vector<double>(N);
-  vector<int> temp_length = vector<int>(N);
-
+  vector<double> area = vector<double>(N, 0);
+  vector<double> len = vector<double>(N, 0);
+  vector<double> GBC_l = vector<double>(GBC_bin_num, 1);
+ 
   for(int i = 0; i < M; i++){
     for(int j = 0; j < N; j++){
-      temp_length[j] = g.exon_len[j]*(int)g.a[i*N+j];
+      len[j] = g.exon_len[j]*g.exon_iso_idx[i][j];
     }
-    get_Curve_from_bin(GBC, GBC_bin_num, temp_length, N, temp);
+    get_curve_from_hist(GBC, GBC_l, len, area);
+    double tot_area = sum_vector(area);
     for(int j = 0; j < N; j++){
-      g.GBC[i*N+j] = temp[j];
+      g.GBC[i*N+j] = area[j];
     }
   }
 }
 
-//N:number of bin
-//exon_N:number of exon
-void get_Curve_from_bin(const vector<double>& bin, int N, const vector<int>& length,
-    int exon_N, vector<double>& Area){
-  vector<double> new_len = vector<double>(exon_N);
+void get_curve_from_hist(const vector<double> & hist_h, const vector<double> & hist_l,
+    const vector<double> & len, vector<double>& area){
+  vector<double> tmp_hist_l = hist_l;
+  vector<double> tmp_len = len;
 
-  int total_Length = 0;
-  for(int i = 0; i < exon_N; i++){
-    total_Length += length[i];
+  int hist_size = hist_h.size();
+  int len_size = len.size();
+
+  int tot_hist_len = sum_vector(hist_l);
+  int tot_len = sum_vector(len);
+  for(size_t i = 0; i < len_size; i++){
+    area[i] = 0.0;
+    tmp_len[i] = (double)len[i]/tot_len * tot_hist_len;
   }
-  for(int i = 0; i < exon_N; i++){
-    new_len[i] = (double)length[i]/total_Length*N;
-  }
 
-  double left_coor = 0.0;
-  double right_coor = new_len[0];
-
-  double temp_pos = left_coor;
-  double delta = 0;
-  for(int i = 0; i < exon_N; i++){
-    Area[i] = 0.0;
-
-    while(right_coor > temp_pos){
-      delta = min(((int)(temp_pos+1)-temp_pos), right_coor-temp_pos);
-      Area[i] += delta * bin[(int)temp_pos];
-      temp_pos += delta;
+  size_t idx1 = 0, idx2 = 0; // idx1: index of hist, idx2: index of len
+  for(; idx2 < len_size; ++idx2){
+    while(idx1 < hist_size && tmp_len[idx2] > tmp_hist_l[idx1]){
+      area[idx2] += tmp_hist_l[idx1] * hist_h[idx1];
+      tmp_len[idx2] -= tmp_hist_l[idx1++];
     }
-
-    if(fabs(new_len[i]) < EPSILON){
-      Area[i] = 0;
+    if(idx1 >= hist_size){
+      return;
     }
-
-    if(i < exon_N-1){
-      left_coor += new_len[i];
-      right_coor += new_len[i+1];
-    }
+    area[idx2] += tmp_len[idx2] * hist_h[idx1];
+    tmp_hist_l[idx1] -= tmp_len[idx2];
   }
 }
 
@@ -684,7 +650,6 @@ void calcuAllTheGenes(map<string, gene_info> & map_g_info,
     gene_info & g = iter_map_g_info -> second;
 
     g.is_valid = g.if_valid();
-
     if(g.is_valid == 1){
       out << g.gene_name << "\t" << g.iso_num << "\t" << g.tot_rd_cnt << "\t";
       for(int i = 0; i < g.iso_num; i++){

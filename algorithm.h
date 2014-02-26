@@ -61,10 +61,7 @@ void get_LBC_matrix(gene_info& g);
 
 void get_GBC_matrix(gene_info& g, const vector<double> & GBC);
 
-//N:number of bin
-//exon_N:number of exon
-void get_Curve_from_bin(const vector<double>& bin, int N, const vector<int>& length,
-    int exon_N, vector<double>& Area);
-
+void get_curve_from_bin(const vector<double> & hist_h, const vector<double> & hist_l,
+    const vector<double> & len, vector<double>& area);
 
 #endif // ALGORITHM_H_INCLUDED
