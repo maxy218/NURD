@@ -33,7 +33,7 @@
 using namespace std;
 
 //deal with refflat format annotation file.
-void get_anno_refflat(ifstream& in_anno, map<string, list<isoform_anno> >& g_iso_anno_map){
+void get_anno_refflat(ifstream& in_anno, map<string, vector<isoform_anno> >& g_iso_anno_map){
   map<string, gene_info>::iterator iter_map_g_anno;
 
   string temp_line;
@@ -45,12 +45,12 @@ void get_anno_refflat(ifstream& in_anno, map<string, list<isoform_anno> >& g_iso
 
 //only deal with the exon annotation. CDS and start/end_codon is ignored.
 // 0 -> chr; 1 -> data source; 2 -> function; 3 -> start; 4 -> end; 5 -> score; 6 -> strand; 7 -> phase; 8 -> gene id and trans id
-void get_anno_GTF(ifstream& in_anno, map<string,list<isoform_anno> >& g_iso_anno_map){
+void get_anno_GTF(ifstream& in_anno, map<string, vector<isoform_anno> >& g_iso_anno_map){
   map<string, gene_info>::iterator iter_map_g_anno;
 
   string temp_line;
-  map<string, isoform_anno> dealt_trans_anno_map; // key: transcript name, value: transcript annotation.
-  map<string, isoform_anno>::iterator trans_anno_iter; // key: transcript name, value: transcript annotation.
+  map<string, isoform_anno> iso_anno_map; // key: transcript name, value: transcript annotation.
+  map<string, isoform_anno>::iterator iter_map_iso_anno; // key: transcript name, value: transcript annotation.
   while(getline(in_anno, temp_line)){
     vector<string> str_vec = delimiter(temp_line,'\t');
     vector<string> gene_trans_id_vec = delimiter(str_vec[8],'\"');
@@ -62,46 +62,49 @@ void get_anno_GTF(ifstream& in_anno, map<string,list<isoform_anno> >& g_iso_anno
       start_pos = atoi(str_vec[3].c_str()) - 1; // "-1" is because the GTF starts from 1, not 0 (which is refFlat style.)
       end_pos = atoi(str_vec[4].c_str()); // the end position is the same with refflat.
 
-      string key_trans_name_chr = gene_trans_id_vec[3] + "\t" + str_vec[0]; // trans name and chr name are needed to identify a transcript. some trans may come from different chromosome.
+      string iso_chr_combined = gene_trans_id_vec[3] + "\t" + str_vec[0]; // trans name and chr name are needed to identify a transcript. some trans may come from different chromosome.
 
-      if(dealt_trans_anno_map.find( key_trans_name_chr ) != dealt_trans_anno_map.end()) // if has been dealt before.
+      if(iso_anno_map.find( iso_chr_combined ) != iso_anno_map.end()) // if has been dealt before.
       {
-        dealt_trans_anno_map[ key_trans_name_chr ].exon_starts.push_back(start_pos);
-        dealt_trans_anno_map[ key_trans_name_chr ].exon_ends.push_back(end_pos);
+        iso_anno_map[ iso_chr_combined ].exon_starts.push_back(start_pos);
+        iso_anno_map[ iso_chr_combined ].exon_ends.push_back(end_pos);
       }
       else // this trans has not been dealt.
       {
-        dealt_trans_anno_map[ key_trans_name_chr ] = isoform_anno();
-        dealt_trans_anno_map[ key_trans_name_chr ].gene_name = gene_trans_id_vec[1];
-        dealt_trans_anno_map[ key_trans_name_chr ].name = gene_trans_id_vec[3];
-        dealt_trans_anno_map[ key_trans_name_chr ].chrom = str_vec[0];
-        dealt_trans_anno_map[ key_trans_name_chr ].strand = str_vec[6];
+        iso_anno_map[ iso_chr_combined ] = isoform_anno();
 
-        dealt_trans_anno_map[ key_trans_name_chr ].exon_starts.push_back(start_pos);
-        dealt_trans_anno_map[ key_trans_name_chr ].exon_ends.push_back(end_pos);
+        isoform_anno & iso_anno = iso_anno_map[ iso_chr_combined ];
+        iso_anno.gene_name = gene_trans_id_vec[1];
+        iso_anno.name = gene_trans_id_vec[3];
+        iso_anno.chrom = str_vec[0];
+        iso_anno.strand = str_vec[6];
+
+        iso_anno.exon_starts.push_back(start_pos);
+        iso_anno.exon_ends.push_back(end_pos);
       }
     }
   }
 
-  for(trans_anno_iter = dealt_trans_anno_map.begin(); trans_anno_iter != dealt_trans_anno_map.end(); trans_anno_iter++)
+  for(iter_map_iso_anno = iso_anno_map.begin(); iter_map_iso_anno != iso_anno_map.end(); iter_map_iso_anno++)
   {
-    sort(trans_anno_iter->second.exon_starts.begin(), trans_anno_iter->second.exon_starts.end());
-    sort(trans_anno_iter->second.exon_ends.begin(), trans_anno_iter->second.exon_ends.end());
-    unique(trans_anno_iter->second.exon_starts.begin(), trans_anno_iter->second.exon_starts.end());
-    unique(trans_anno_iter->second.exon_ends.begin(), trans_anno_iter->second.exon_ends.end());
+    isoform_anno & iso_anno = iter_map_iso_anno->second;
+    sort(iso_anno.exon_starts.begin(), iso_anno.exon_starts.end());
+    sort(iso_anno.exon_ends.begin(), iso_anno.exon_ends.end());
+    unique(iso_anno.exon_starts.begin(), iso_anno.exon_starts.end());
+    unique(iso_anno.exon_ends.begin(), iso_anno.exon_ends.end());
 
-    trans_anno_iter->second.exon_cnt= trans_anno_iter->second.exon_starts.size();
-    trans_anno_iter->second.tx_start= trans_anno_iter->second.exon_starts[0];
-    trans_anno_iter->second.tx_end = trans_anno_iter->second.exon_ends[ trans_anno_iter->second.exon_cnt - 1 ];
+    iso_anno.exon_cnt= iso_anno.exon_starts.size();
+    iso_anno.tx_start= iso_anno.exon_starts[0];
+    iso_anno.tx_end = iso_anno.exon_ends[ iso_anno.exon_cnt - 1 ];
 
-    g_iso_anno_map[trans_anno_iter->second.gene_name].push_back( trans_anno_iter->second );
+    g_iso_anno_map[iso_anno.gene_name].push_back( iso_anno );
   }
 }
 
 void get_anno_info(ifstream & in_anno, const int anno_choice, map<string, gene_info> & map_g_anno){
   map<string, gene_info>::iterator iter_map_g_anno;
-  map<string, list<isoform_anno> > g_iso_anno_map;
-  map<string, list<isoform_anno> >::iterator iter_g_iso;
+  map<string, vector<isoform_anno> > g_iso_anno_map;
+  map<string, vector<isoform_anno> >::iterator iter_g_iso;
 
   if(anno_choice == 1){
     get_anno_refflat(in_anno, g_iso_anno_map);
@@ -127,7 +130,8 @@ void get_anno_info(ifstream & in_anno, const int anno_choice, map<string, gene_i
 }
 
 // output the data to the nurd file, which is a temporary file.
-void output_nurd_file(ofstream& out_nurd, const vector<double>& GBC, const map<string, gene_info>& map_g_anno, int tot_valid_rd_cnt){
+void output_nurd_file(const vector<double>& GBC, const map<string, gene_info>& map_g_anno, 
+    int tot_valid_rd_cnt, ofstream& out_nurd){
   // output GBC curve
   output_vector<double>(GBC, out_nurd, '\t');
 
@@ -208,32 +212,34 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
   int start_pos, end_pos;
   for(iter_map_g_info = map_g_info.begin(); iter_map_g_info != map_g_info.end(); iter_map_g_info++)
   {
+    gene_info & g = iter_map_g_info -> second;
+
     //frist map
-    iter_map_chr_pos_gene = map_chr_pos_gene.find((*iter_map_g_info).second.chrom);
+    iter_map_chr_pos_gene = map_chr_pos_gene.find(g.chrom);
     if(iter_map_chr_pos_gene == map_chr_pos_gene.end()){
       map<int,string> tmp_map;
-      start_pos = (*iter_map_g_info).second.g_start;
-      tmp_map[start_pos] = (*iter_map_g_info).first;
+      start_pos = g.g_start;
+      tmp_map[start_pos] = g.gene_name;
 
-      map_chr_pos_gene[(*iter_map_g_info).second.chrom] = tmp_map;
+      map_chr_pos_gene[g.chrom] = tmp_map;
     }
     else{
-      start_pos = (*iter_map_g_info).second.g_start;
-      map_chr_pos_gene[(*iter_map_g_info).second.chrom][start_pos] = (*iter_map_g_info).first;
+      start_pos = g.g_start;
+      map_chr_pos_gene[g.chrom][start_pos] = g.gene_name;
     }
 
     //second map
-    iter_map_chr_pos_vec = map_chr_start_pos_vec.find((*iter_map_g_info).second.chrom);
+    iter_map_chr_pos_vec = map_chr_start_pos_vec.find(g.chrom);
     if(iter_map_chr_pos_vec == map_chr_start_pos_vec.end()){
       vector<int> tmp_vec;
-      start_pos = (*iter_map_g_info).second.g_start;
+      start_pos = g.g_start;
       tmp_vec.push_back(start_pos);
 
-      map_chr_start_pos_vec[(*iter_map_g_info).second.chrom] = tmp_vec;
+      map_chr_start_pos_vec[g.chrom] = tmp_vec;
     }
     else{
-      start_pos = (*iter_map_g_info).second.g_start;
-      map_chr_start_pos_vec[(*iter_map_g_info).second.chrom].push_back(start_pos);
+      start_pos = g.g_start;
+      map_chr_start_pos_vec[g.chrom].push_back(start_pos);
     }
   }
 
@@ -393,7 +399,7 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
 
 /*
   //output the information to nurd file.
-  output_nurd_file(out_nurd, GBC, map_g_info, tot_valid_rd_cnt);
+  output_nurd_file(GBC, map_g_info, tot_valid_rd_cnt, out_nurd);
 */
 
   return 0;

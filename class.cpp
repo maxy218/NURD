@@ -152,8 +152,8 @@ void exon_len_split(
     const vector<vector<_chr_coor> >& exon_iso_end,
     vector<_chr_coor>& exon_len,
     vector<vector<int> >& exon_iso_idx,
-    list<_chr_coor>& list_split_s,
-    list<_chr_coor>& list_split_e)
+    vector<_chr_coor>& vec_splt_s,
+    vector<_chr_coor>& vec_splt_e)
 {
   list<int> list_s;
   list<int> list_e;
@@ -207,8 +207,8 @@ void exon_len_split(
       if(list_s.front() < list_e.front() ){
         cur_pos = list_s.front();
         list_s.pop_front();
-        list_split_s.push_back(cur_pos);
-        list_split_e.push_back(cur_pos);
+        vec_splt_s.push_back(cur_pos);
+        vec_splt_e.push_back(cur_pos);
 
         //turn the related isoform on
         for(int i = 0; i < iso_num; i++){
@@ -224,7 +224,7 @@ void exon_len_split(
         //turn the related isoform off
         //because the end is the first event of all the starts and ends, so the related isoform ending with this end must be on
         cur_pos = list_e.front();
-        list_split_e.push_back(cur_pos);
+        vec_splt_e.push_back(cur_pos);
         for(int i = 0; i < iso_num; i++){
           if(index[i] < exon_iso_start[i].size()){
             if(exon_iso_end[i][ index[i] ] == cur_pos){
@@ -233,17 +233,17 @@ void exon_len_split(
             }
           }
         }
-        //need following step. If there are isoforms still on, then need add a start to list_split_s
+        //need following step. If there are isoforms still on, then need add a start to vec_splt_s
         if(if_some_state_on(state)){
-          list_split_s.push_back(cur_pos);
+          vec_splt_s.push_back(cur_pos);
         }
         list_e.pop_front();
       }
       //start and end are on the same position
       else{
         cur_pos = list_s.front();
-        list_split_s.push_back(cur_pos);
-        list_split_e.push_back(cur_pos);
+        vec_splt_s.push_back(cur_pos);
+        vec_splt_e.push_back(cur_pos);
         for(int i = 0; i < iso_num; i++){
           if(index[i] < exon_iso_start[i].size()){
             if(exon_iso_end[i][ index[i] ] == cur_pos){
@@ -262,7 +262,7 @@ void exon_len_split(
     //if no isoform on, then find the first start as the new start point
     else{
       cur_pos=list_s.front();
-      list_split_s.push_back(cur_pos);
+      vec_splt_s.push_back(cur_pos);
       for(int i = 0; i < iso_num; i++){
         if(index[i] < exon_iso_start[i].size()){
           if(exon_iso_start[i][ index[i] ] == cur_pos){
@@ -278,16 +278,16 @@ void exon_len_split(
   while(list_e.size()> 0){
     //turn the related isoform off
     cur_pos = list_e.front();
-    list_split_e.push_back(cur_pos);
+    vec_splt_e.push_back(cur_pos);
     for(int i = 0; i < iso_num; i++){
       if(exon_iso_end[i][ index[i] ] == cur_pos){
         state[i] = false;
         index[i]++;
       }
     }
-    //need following step. If there are isoforms still on, then need add a start to list_split_s
+    //need following step. If there are isoforms still on, then need add a start to vec_splt_s
     if(if_some_state_on(state)){
-      list_split_s.push_back(cur_pos);
+      vec_splt_s.push_back(cur_pos);
     }
     list_e.pop_front();
   }
@@ -298,34 +298,34 @@ void exon_len_split(
     vector<int> tmp_vec;
     exon_iso_idx.push_back(tmp_vec);
   }
-  int total_exon_num = list_split_s.size();
+  int total_exon_num = vec_splt_s.size();
 
-  list<int>::iterator iter_list_s = list_split_s.begin();
-  list<int>::iterator iter_list_e = list_split_e.begin();
-  while(iter_list_s != list_split_s.end()){
-    exon_len.push_back((*iter_list_e)-(*iter_list_s));
-    iter_list_s++;
-    iter_list_e++;
+  vector<_chr_coor>::iterator iter_vec_s = vec_splt_s.begin();
+  vector<_chr_coor>::iterator iter_vec_e = vec_splt_e.begin();
+  while(iter_vec_s != vec_splt_s.end()){
+    exon_len.push_back((*iter_vec_e)-(*iter_vec_s));
+    iter_vec_s++;
+    iter_vec_e++;
   }
   for(int i = 0; i < iso_num; i++){
     int iso_exon_index = 0;
     bool if_on = false;
-    for(iter_list_s = list_split_s.begin(), iter_list_e = list_split_e.begin();
-      iter_list_s != list_split_s.end(), iter_list_e != list_split_e.end(), iso_exon_index < exon_iso_start[i].size();
-      iter_list_s++,iter_list_e++)
+    for(iter_vec_s = vec_splt_s.begin(), iter_vec_e = vec_splt_e.begin();
+      iter_vec_s != vec_splt_s.end(), iter_vec_e != vec_splt_e.end(), iso_exon_index < exon_iso_start[i].size();
+      iter_vec_s++,iter_vec_e++)
     {
-      if((*iter_list_s) < exon_iso_start[i][iso_exon_index]){
+      if((*iter_vec_s) < exon_iso_start[i][iso_exon_index]){
         exon_iso_idx[i].push_back(0);
       }
-      else if((*iter_list_s) >= exon_iso_start[i][iso_exon_index] && (*iter_list_e) < exon_iso_end[i][iso_exon_index]){
+      else if((*iter_vec_s) >= exon_iso_start[i][iso_exon_index] && (*iter_vec_e) < exon_iso_end[i][iso_exon_index]){
         exon_iso_idx[i].push_back(1);
       }
-      else if((*iter_list_e) == exon_iso_end[i][iso_exon_index]){
+      else if((*iter_vec_e) == exon_iso_end[i][iso_exon_index]){
         exon_iso_idx[i].push_back(1);
         iso_exon_index++;
       }
     }
-    for(;iter_list_s != list_split_s.end(),iter_list_e != list_split_e.end(); iter_list_s++, iter_list_e++){
+    for(;iter_vec_s != vec_splt_s.end(),iter_vec_e != vec_splt_e.end(); iter_vec_s++, iter_vec_e++){
       exon_iso_idx[i].push_back(0);
     }
   }
@@ -334,11 +334,10 @@ void exon_len_split(
 
 
 
-gene_info::gene_info(list<isoform_anno>& iso_list ){
-  list<isoform_anno>::iterator iter_gene = iso_list.begin();
-  list<_chr_coor> tmp_list_exon_splited_s;
-  list<_chr_coor> tmp_list_exon_splited_e;
-  list<_chr_coor>::iterator iter_int;
+gene_info::gene_info(const vector<isoform_anno>& iso_vec){
+  vector<isoform_anno>::const_iterator iter_gene = iso_vec.begin();
+  vector<_chr_coor> vec_exon_splt_s;
+  vector<_chr_coor> vec_exon_splt_e;
 
   //use tmp, because there exists exon spliting event
   vector<vector<_chr_coor> > tmp_exon_iso_start;
@@ -346,8 +345,8 @@ gene_info::gene_info(list<isoform_anno>& iso_list ){
 
   gene_name = (*iter_gene).gene_name;
 
-  iter_gene = iso_list.begin();
-  while(iter_gene != iso_list.end()){
+  iter_gene = iso_vec.begin();
+  while(iter_gene != iso_vec.end()){
     vector<_chr_coor>::iterator tmp_iter;
     iso_name.push_back((*iter_gene).name);
     chrom = (*iter_gene).chrom;
@@ -369,19 +368,19 @@ gene_info::gene_info(list<isoform_anno>& iso_list ){
     tmp_exon_iso_end,
     tmp_exon_g_len,
     tmp_exon_iso_idx,
-    tmp_list_exon_splited_s,
-    tmp_list_exon_splited_e);
+    vec_exon_splt_s,
+    vec_exon_splt_e);
   ///////////////////////////////////////////////////////////////////////////
 
   exon_num = tmp_exon_g_len.size();
 
-  for(iter_int = tmp_list_exon_splited_s.begin(); iter_int != tmp_list_exon_splited_s.end(); iter_int++){
-    exon_start_g.push_back(*iter_int);
+  size_t idx = 0;
+  size_t sz = vec_exon_splt_s.size();
+  for(idx = 0; idx < sz; ++idx){
+    exon_start_g.push_back(vec_exon_splt_s[idx]);
+    exon_end_g.push_back(vec_exon_splt_e[idx]);
   }
 
-  for(iter_int = tmp_list_exon_splited_e.begin(); iter_int != tmp_list_exon_splited_e.end(); iter_int++){
-    exon_end_g.push_back(*iter_int);
-  }
   g_start = exon_start_g[0];
   g_end = exon_end_g[exon_end_g.size()-1];
 
@@ -458,65 +457,6 @@ gene_info::gene_info(list<isoform_anno>& iso_list ){
 
   // the member of is_valid should be set after get the read counts.
 }
-
-/*
-vector<double> get_GBC(
-  map<string, list<_chr_coor> > & gene_read_pos_map,
-  map<string, gene_info> & gene_info_map,
-  int num_bins
-  )
-{
-  // int num_bins = 10;
-  vector<double> GBC(num_bins);
-  for(int i = 0; i < num_bins; i++){
-    GBC[i] = 0.0;
-  }
-
-  int outlier_read_cnt = 0;
-
-  map<string, gene_info>::iterator iter_gene_info;
-  for(iter_gene_info = gene_info_map.begin(); iter_gene_info != gene_info_map.end(); iter_gene_info++){
-
-    string gene_name = (*iter_gene_info).first;
-
-    //only use the genes with single isoform
-    if((*iter_gene_info).second.iso_name.size() >= 2){
-      continue;
-    }
-    // should have enough reads, for example larger than 100
-    else if(gene_read_pos_map[ gene_name ].size() < 100){
-      continue;
-    }
-    else{
-      list<int>::iterator iter_pos;
-      int gene_len = (*iter_gene_info).second.g_len;
-
-      for(iter_pos = gene_read_pos_map[gene_name].begin(); 
-          iter_pos != gene_read_pos_map[gene_name].end(); iter_pos++)
-      {
-        if( (*iter_pos) < gene_len && (*iter_pos) >= 0 ){
-          GBC[ (int)((*iter_pos)*num_bins)/gene_len ]++;
-        }
-        else if((*iter_pos) == gene_len){
-          GBC[ num_bins-1 ]++;
-        }
-        else{
-          outlier_read_cnt++;
-        }
-      }
-    }
-  }
-
-  double total_GBC = 0;
-  for(int i = 0; i < num_bins; i++){
-    total_GBC += GBC[i];
-  }
-  for(int i = 0; i < num_bins; i++){
-    GBC[i] = ((double)GBC[i]*num_bins)/total_GBC;
-  }
-  return GBC;
-}
-*/
 
 //the following work is to change the return type from bool to int, different return value represent different error type
 bool if_gene_anno_valid(const gene_info& gene){

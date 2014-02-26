@@ -99,7 +99,7 @@ public:
   //following are some constructor functions.
   gene_info();
   gene_info(const gene_info& g);
-  gene_info(list<isoform_anno>& iso_list);
+  gene_info(const vector<isoform_anno>& iso_vec);
 
   //following are some other member function
   int if_valid();  //judge whether the gene is valid. If one gene is invalid, may be it is because:
