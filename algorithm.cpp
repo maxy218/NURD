@@ -616,30 +616,27 @@ void get_GBC_matrix(gene_info& g, const vector<double> & GBC){
 
 void get_curve_from_hist(const vector<double> & hist_h, const vector<double> & hist_l,
     const vector<double> & len, vector<double>& area){
-  vector<double> tmp_hist_l = hist_l;
-  vector<double> tmp_len = len;
 
   int hist_size = hist_h.size();
   int len_size = len.size();
-
   int tot_hist_len = sum_vector(hist_l);
   int tot_len = sum_vector(len);
-  for(size_t i = 0; i < len_size; i++){
-    area[i] = 0.0;
-    tmp_len[i] = (double)len[i]/tot_len * tot_hist_len;
-  }
 
   size_t idx1 = 0, idx2 = 0; // idx1: index of hist, idx2: index of len
+  double cur_hist_len = hist_l[idx1];
+  double cur_len; 
   for(; idx2 < len_size; ++idx2){
-    while(idx1 < hist_size && tmp_len[idx2] > tmp_hist_l[idx1]){
-      area[idx2] += tmp_hist_l[idx1] * hist_h[idx1];
-      tmp_len[idx2] -= tmp_hist_l[idx1++];
+    cur_len = (double)len[idx2] / tot_len * tot_hist_len;
+    while(idx1 < hist_size && cur_len > cur_hist_len){
+      area[idx2] += cur_hist_len * hist_h[idx1];
+      cur_len -= cur_hist_len;
+      cur_hist_len = hist_l[++idx1]; 
     }
     if(idx1 >= hist_size){
       return;
     }
-    area[idx2] += tmp_len[idx2] * hist_h[idx1];
-    tmp_hist_l[idx1] -= tmp_len[idx2];
+    area[idx2] += cur_len * hist_h[idx1];
+    cur_hist_len -= cur_len;
   }
 }
 
