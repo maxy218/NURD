@@ -27,9 +27,6 @@ using namespace std;
 extern const double EPSILON;
 extern const double maxFloat;
 extern const int max_iteration;
-
-extern int bin_N;
-extern vector<double> bin;
 extern const int GBC_bin_num;
 
 typedef int _chr_coor;

@@ -26,6 +26,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <list>
 
 #include <unistd.h> // parsing argument
 #include <sys/stat.h> 	// mkdir and access 
@@ -85,5 +86,154 @@ T sum_vector(const vector<T> & vec){
   return sum;
 }
 
+//return -1 if fail
+//else, return the index of x
+//vec is a vector of boundary of each interval
+//  n+1 elements represent n intervals, the first elem is 0
+//the interval is left close and right open
+// [a, b)
+template <class T >
+int bin_search(const vector<T> & vec, const T & x){
+  // invalid boundaries.
+  if(vec.size() < 2){
+    return -1;
+  }
+
+  int left = 0;
+  int right = vec.size()-2;
+  int mid;//find the middle interval, size-1 for there are n+1 elems in vector
+
+  if(x >= vec[right + 1] || x < vec[left]){
+    return -1;
+  }
+  while(left <= right){
+    mid = left + (right - left)/2;
+    if(x >= vec[mid] && x < vec[mid+1]){
+      return mid;
+    }
+    else if(x < vec[mid]){
+      right = mid - 1;
+    }
+    else{
+      left = mid + 1;
+    }
+  }
+  return left;
+}
+
+// two vector version. It's totally different with the one vector version.
+// one vector version can easily transform into two vector version.
+// vec1: starts     vec2:ends
+// reference: introduction to the Design and analysis of algorithms(second edition)
+//  related chapter: chapter4. Chinese version, P104
+template <class T >
+int bin_search(const vector<T>& vec1, const vector<T>& vec2, const T & x){
+  int left = 0;
+  int right = vec1.size() - 1;
+  int mid;
+
+  //if x is out of bound, return -1. false
+  if(x >= vec2[right] || x < vec1[left]){
+    return -1;
+  }
+  while(left <= right){
+    mid = left + (right - left)/2;
+    if(x >= vec1[mid] && x < vec2[mid]){
+      return mid;
+    }
+    else if(x < vec1[mid]){
+      right = mid - 1;
+    }
+    else{
+      left = mid + 1;
+    }
+  }
+  return -1;
+}
+
+// This version is for the array that the element is sorted from large element to small element. The reverse of above
+template <class T >
+int bin_search_reverse(const vector<T>& vec1, const vector<T>& vec2, const T& x){
+  int left = 0;
+  int right = vec1.size() - 1;
+  int mid;
+
+  //if x is out of bound, return -1. false
+  if(x >= vec2[left] || x < vec1[right]){
+    return -1;
+  }
+  while(left <= right){
+    mid = left + (right - left)/2;
+    if(x >= vec1[mid] && x < vec2[mid]){
+      return mid;
+    }
+    else if(x < vec1[mid]){
+      left = mid + 1;
+    }
+    else{
+      right = mid - 1;
+    }
+  }
+  return -1;
+}
+
+// two vector and multiple return value version.
+// It's similar with the above binary search version
+// If there are multiple hit, return a list of recode. The list record the index of two vector.
+// If there's no hit, return the null list, whose length is 0.
+template <class T >
+list<int> bin_search_multi(const vector<T>& vec1, const vector<T>& vec2, const T & x){
+  int left = 0;
+  int right = vec1.size()-1;
+  int mid;
+  list<int> result;
+
+  //if x is out of bound, return -1. false
+  if(x >= vec2[right] || x < vec1[left]){
+    return result;
+  }
+  while(left <= right){
+    mid = left + (right - left)/2;
+    if(x >= vec1[mid] && x < vec2[mid]){
+      result.push_back(mid);
+      break;
+    }
+    else if(x < vec1[mid]){
+      right = mid - 1;
+    }
+    else{
+      left = mid + 1;
+    }
+  }
+
+  int mid_bak = mid;
+  int flank_gene = 10; // allowing for flank 10 genes to search the covered genes.
+
+  // search the region before m. Stop when the x is larger than the right bound
+  // not perfect. Because only starts are sorted, so it can't guarantee to find all the proper interval.
+  mid--;
+  int left_flank = 0;
+  while(mid >= 0 && left_flank < flank_gene){
+    left_flank++;
+    if(x >= vec1[mid] && x < vec2[mid]){
+      result.push_back(mid);
+    }
+    mid--;
+  }
+  // search the region after m. Stop when the x is smaller than the left bound
+  // This half should be perfect.
+  mid = mid_bak + 1;
+  int total_size = vec1.size();
+  int right_flank = 0;
+  while(mid < total_size && right_flank < flank_gene){
+    right_flank++;
+    if(x >= vec1[mid] && x < vec2[mid]){
+      result.push_back(mid);
+    }
+    mid++;
+  }
+  result.sort();
+  return result;
+}
 
 #endif // COMMON_H_INCLUDED 

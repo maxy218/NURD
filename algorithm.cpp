@@ -257,8 +257,8 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
   string temp_line;
 
   //deal with header
-  in_rdmap.seekg(0,ios::beg);
-  while(getline(in_rdmap,temp_line)){
+  in_rdmap.seekg(0, ios::beg);
+  while(getline(in_rdmap, temp_line)){
     if(temp_line[0] != '@'){
       break;
     }
@@ -291,7 +291,7 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
       }
 
       _chr_coor read_pos = atoi(sam_column[3].c_str());
-      if( (read_Flag & RD_FLAG_MASK_REVERSE_MAP) !=0 ){ // reverse read
+      if( (read_Flag & RD_FLAG_MASK_REVERSE_MAP) != 0 ){ // reverse read
         read_pos += sam_column[9].size();
       }
 
@@ -365,7 +365,6 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
       }
       continue;
     }
-
   }while(getline(in_rdmap,temp_line));
   //////////  read count ends!
   //////////////////////////////////////////
@@ -454,10 +453,6 @@ void max_isoform_bisearch(gene_info& g, int k){
   }
 }
 
-
-ofstream out_theta;
-
-
 double max_likelihood_given_C(gene_info& g){
   int M = g.iso_num;
 
@@ -486,31 +481,19 @@ double max_likelihood_given_C(gene_info& g){
 }
 
 double max_likelihood(gene_info& g, double alpha, const vector<double> & GBC){
-  int iteration = 0;//means the total number of iterate;
-  int iter = 0;   //represent the current number of iterate;
-
-  double f_value = get_log_likelihood(g);
-  double new_f_value = 0.0;
+  int M = g.iso_num;
+  int N = g.exon_num;
 
   get_GBC_matrix(g, GBC);
-
-  do{
-    get_LBC_matrix(g);
-    int M = g.iso_num;
-    int N = g.exon_num;
-
-    vector<double> tempLength = vector<double>(M*N);
-    for(int i = 0; i < M; i++){
-      for(int j = 0; j < N; j++){
-        tempLength[i*N+j] = (double)g.exon_len[j]/g.iso_len[i];
-        g.c[i*N+j] = ( g.GBC[i*N+j]*alpha + g.LBC[i*N+j]*(1-alpha) )/tempLength[i*N+j]/bin_N;
-      }
+  get_LBC_matrix(g);
+  double rel_len = 0; // relative length
+  for(int i = 0; i < M; i++){
+    for(int j = 0; j < N; j++){
+      rel_len = (double)g.exon_len[j]/g.iso_len[i];
+      g.c[i*N+j] = ( g.GBC[i*N+j]*alpha + g.LBC[i*N+j]*(1-alpha) )/rel_len/GBC_bin_num;
     }
-    new_f_value = max_likelihood_given_C(g);
-    iter++;
-  }while(iter <= iteration);
-
-  return f_value;
+  }
+  return max_likelihood_given_C(g);
 }
 
 double get_log_likelihood(const gene_info& g){
@@ -518,7 +501,6 @@ double get_log_likelihood(const gene_info& g){
   int M = g.iso_num;
 
   double likeli = 0.0;
-
   for(int j = 0; j < N; j++){
     double tempSum1 = 0.0;
     double tempSum2 = 0.0;
@@ -628,7 +610,7 @@ void get_LBC_matrix(gene_info& g){
     get_Curve_from_bin(newLBC, new_tot_len, temp_length, N, temp);
 
     for(int j = 0; j < N; j++){
-      g.LBC[i*N+j] = temp[j]*bin_N/new_tot_len;
+      g.LBC[i*N+j] = temp[j]*GBC_bin_num/new_tot_len;
     }
   }
 }
@@ -643,7 +625,7 @@ void get_GBC_matrix(gene_info& g, const vector<double> & GBC){
     for(int j = 0; j < N; j++){
       temp_length[j] = g.exon_len[j]*(int)g.a[i*N+j];
     }
-    get_Curve_from_bin(GBC, bin_N, temp_length, N, temp);
+    get_Curve_from_bin(GBC, GBC_bin_num, temp_length, N, temp);
     for(int j = 0; j < N; j++){
       g.GBC[i*N+j] = temp[j];
     }
@@ -727,155 +709,5 @@ void calcuAllTheGenes(map<string, gene_info> & map_g_info,
       out << "\n";
     }
   }
-}
-
-//return -1 if fail
-//else, return the index of x
-//vec is a vector of boundary of each interval
-//  n+1 elements represent n intervals, the first elem is 0
-//the interval is left close and right open
-// [a, b)
-template <class T >
-int bin_search(const vector<T> & vec, const T & x){
-  // invalid boundaries.
-  if(vec.size() < 2){
-    return -1;
-  }
-
-  int left = 0;
-  int right = vec.size()-2;
-  int mid;//find the middle interval, size-1 for there are n+1 elems in vector
-
-  if(x >= vec[right + 1] || x < vec[left]){
-    return -1;
-  }
-  while(left <= right){
-    mid = left + (right - left)/2;
-    if(x >= vec[mid] && x < vec[mid+1]){
-      return mid;
-    }
-    else if(x < vec[mid]){
-      right = mid - 1;
-    }
-    else{
-      left = mid + 1;
-    }
-  }
-  return left;
-}
-
-// two vector version. It's totally different with the one vector version.
-// one vector version can easily transform into two vector version.
-// vec1: starts     vec2:ends
-// reference: introduction to the Design and analysis of algorithms(second edition)
-//  related chapter: chapter4. Chinese version, P104
-template <class T >
-int bin_search(const vector<T>& vec1, const vector<T>& vec2, const T & x){
-  int left = 0;
-  int right = vec1.size() - 1;
-  int mid;
-
-  //if x is out of bound, return -1. false
-  if(x >= vec2[right] || x < vec1[left]){
-    return -1;
-  }
-  while(left <= right){
-    mid = left + (right - left)/2;
-    if(x >= vec1[mid] && x < vec2[mid]){
-      return mid;
-    }
-    else if(x < vec1[mid]){
-      right = mid - 1;
-    }
-    else{
-      left = mid + 1;
-    }
-  }
-  return -1;
-}
-
-// This version is for the array that the element is sorted from large element to small element. The reverse of above
-template <class T >
-int bin_search_reverse(const vector<T>& vec1, const vector<T>& vec2, const T& x){
-  int left = 0;
-  int right = vec1.size() - 1;
-  int mid;
-
-  //if x is out of bound, return -1. false
-  if(x >= vec2[left] || x < vec1[right]){
-    return -1;
-  }
-  while(left <= right){
-    mid = left + (right - left)/2;
-    if(x >= vec1[mid] && x < vec2[mid]){
-      return mid;
-    }
-    else if(x < vec1[mid]){
-      left = mid + 1;
-    }
-    else{
-      right = mid - 1;
-    }
-  }
-  return -1;
-}
-
-// two vector and multiple return value version.
-// It's similar with the above binary search version
-// If there are multiple hit, return a list of recode. The list record the index of two vector.
-// If there's no hit, return the null list, whose length is 0.
-template <class T >
-list<int> bin_search_multi(const vector<T>& vec1, const vector<T>& vec2, const T & x){
-  int left = 0;
-  int right = vec1.size()-1;
-  int mid;
-  list<int> result;
-
-  //if x is out of bound, return -1. false
-  if(x >= vec2[right] || x < vec1[left]){
-    return result;
-  }
-  while(left <= right){
-    mid = left + (right - left)/2;
-    if(x >= vec1[mid] && x < vec2[mid]){
-      result.push_back(mid);
-      break;
-    }
-    else if(x < vec1[mid]){
-      right = mid - 1;
-    }
-    else{
-      left = mid + 1;
-    }
-  }
-
-  int mid_bak = mid;
-  int flank_gene = 10; // allowing for flank 10 genes to search the covered genes.
-
-  // search the region before m. Stop when the x is larger than the right bound
-  // not perfect. Because only starts are sorted, so it can't guarantee to find all the proper interval.
-  mid--;
-  int left_flank = 0;
-  while(mid >= 0 && left_flank < flank_gene){
-    left_flank++;
-    if(x >= vec1[mid] && x < vec2[mid]){
-      result.push_back(mid);
-    }
-    mid--;
-  }
-  // search the region after m. Stop when the x is smaller than the left bound
-  // This half should be perfect.
-  mid = mid_bak + 1;
-  int total_size = vec1.size();
-  int right_flank = 0;
-  while(mid < total_size && right_flank < flank_gene){
-    right_flank++;
-    if(x >= vec1[mid] && x < vec2[mid]){
-      result.push_back(mid);
-    }
-    mid++;
-  }
-  result.sort();
-  return result;
 }
 
