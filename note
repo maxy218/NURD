@@ -26,6 +26,8 @@ rewrite the clock code.
 
 the commit f3a36bcb2be56f953e5f7094594896e3a90db071 cannot work very well. it's slightly different with the standard result.
 
+there's no difference of read cnt, between c378874b968a5f028234162a52fd76ecbf02d657 and the standard result. so, the difference is at the expression estimation part.
+
 the commits that can work now:
 
 

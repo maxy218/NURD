@@ -73,7 +73,6 @@ void output_2D_vector(const vector< vector<T> > & vec, ostream& out, const char 
     }
     out << endl;
   }
-  out << endl;
 }
 
 template<typename T>

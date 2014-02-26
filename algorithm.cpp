@@ -165,6 +165,7 @@ void output_nurd_file(const vector<double>& GBC, const map<string, gene_info>& m
 }
 
 // get the read count of each exon
+ofstream out_nurd("tmp_nurd.txt");
 int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap, 
     size_t & tot_valid_rd_cnt, vector<double> & GBC){
   clock_t start_time,end_time;
@@ -397,10 +398,8 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
     iter_map_g_info->second.tot_rd_cnt = sum_vector(iter_map_g_info->second.rd_cnt);
   }
 
-/*
   //output the information to nurd file.
   output_nurd_file(GBC, map_g_info, tot_valid_rd_cnt, out_nurd);
-*/
 
   return 0;
 }
