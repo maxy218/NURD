@@ -194,7 +194,7 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
   tot_valid_rd_cnt = 0;
 
   // bin number in GBC. GBC is calculated at the same time of reads counting.
-  vector<int> int_GBC = vector<int>(GBC_bin_num, 0);
+  vector<int> int_GBC = vector<int>(GBC_BIN_NUM, 0);
 
   int outlier_read_cnt = 0;
 
@@ -335,33 +335,34 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
           }
         }
         if(!if_multi_map){
+          gene_info & g_info = map_g_info[g_name];
           if(exon_idx != -1){
             tot_valid_rd_cnt++;
             int gene_read_pos = -1; // initialized as an invalid position.
-            if(map_g_info[g_name].strand == "+"){
-              map_g_info[g_name].rd_cnt[exon_idx]++;
+            if(g_info.strand == "+"){
+              g_info.rd_cnt[exon_idx]++;
 
               //for GBC, read pos
-              gene_read_pos = map_g_info[g_name].exon_g_start_l[exon_idx] + read_pos - map_g_info[g_name].exon_start_g[exon_idx];
+              gene_read_pos = g_info.exon_g_start_l[exon_idx] + read_pos - g_info.exon_start_g[exon_idx];
             }
             else{
-              map_g_info[g_name].rd_cnt[exon_idx]++;
+              g_info.rd_cnt[exon_idx]++;
 
               //for GBC, read pos
               // still exon_g_start_l, if you figure out, it's obvious.
-              gene_read_pos = map_g_info[g_name].exon_g_start_l[exon_idx] + map_g_info[g_name].exon_end_g[exon_idx] - read_pos;
+              gene_read_pos = g_info.exon_g_start_l[exon_idx] + g_info.exon_end_g[exon_idx] - read_pos;
             }
 
             //For GBC
             //only use the genes with single isoform
-            if(map_g_info[g_name].iso_name.size() == 1)
+            if(g_info.iso_name.size() == 1)
             {
-              int gene_len = map_g_info[g_name].g_len;
+              int gene_len = g_info.g_len;
               if( gene_read_pos < gene_len && gene_read_pos >= 0 ){
-                int_GBC[ (int)(gene_read_pos*GBC_bin_num)/gene_len ]++;
+                int_GBC[ (int)(gene_read_pos*GBC_BIN_NUM)/gene_len ]++;
               }
               else if(gene_read_pos == gene_len){
-                int_GBC[ GBC_bin_num-1 ]++;
+                int_GBC[ GBC_BIN_NUM-1 ]++;
               }
               else{
                 outlier_read_cnt++;
@@ -379,11 +380,11 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
   //////////////////////////////////
   //////// get GBC
   double total_GBC = 0;
-  for(int i = 0; i < GBC_bin_num; i++){
+  for(int i = 0; i < GBC_BIN_NUM; i++){
     total_GBC += int_GBC[i];
   }
-  for(int i = 0; i < GBC_bin_num; i++){
-    GBC[i] = ((double)int_GBC[i]*GBC_bin_num)/total_GBC;
+  for(int i = 0; i < GBC_BIN_NUM; i++){
+    GBC[i] = ((double)int_GBC[i]*GBC_BIN_NUM)/total_GBC;
   }
   //////////////////////////////////
 
@@ -475,7 +476,7 @@ double max_likelihood_given_C(gene_info& g){
     }
     f_value = new_f_value;
 
-    if(iteration < max_iteration){
+    if(iteration < MAX_ITER_NUM){
       iteration++;
     }
     else{
@@ -495,7 +496,7 @@ double max_likelihood(gene_info& g, double alpha, const vector<double> & GBC){
   for(int i = 0; i < M; i++){
     for(int j = 0; j < N; j++){
       rel_len = (double)g.exon_len[j]/g.iso_len[i];
-      g.c[i*N+j] = ( g.GBC[i*N+j]*alpha + g.LBC[i*N+j]*(1-alpha) )/rel_len/GBC_bin_num;
+      g.c[i*N+j] = ( g.GBC[i*N+j]*alpha + g.LBC[i*N+j]*(1-alpha) )/rel_len/GBC_BIN_NUM;
     }
   }
   return max_likelihood_given_C(g);
@@ -589,7 +590,7 @@ void get_LBC_matrix(gene_info& g){
     get_curve_from_hist(LBC_h, LBC_l, len, area);
     double tot_area = sum_vector(area);
     for(int j = 0; j < N; j++){
-      g.LBC[i*N+j] = area[j] * GBC_bin_num / tot_area;
+      g.LBC[i*N+j] = area[j] * GBC_BIN_NUM / tot_area;
     }
   }
 }
@@ -599,7 +600,7 @@ void get_GBC_matrix(gene_info& g, const vector<double> & GBC){
   int N = g.exon_num;
   vector<double> area = vector<double>(N, 0);
   vector<double> len = vector<double>(N, 0);
-  vector<double> GBC_l = vector<double>(GBC_bin_num, 1);
+  vector<double> GBC_l = vector<double>(GBC_BIN_NUM, 1);
  
   for(int i = 0; i < M; i++){
     for(int j = 0; j < N; j++){

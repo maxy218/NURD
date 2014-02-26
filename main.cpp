@@ -259,7 +259,7 @@ int main(int argc, char**argv)
 
   cout << "number of genes with anno:" << map_g_info.size() << endl;
 
-  vector<double> GBC = vector<double>(GBC_bin_num, 0.0);
+  vector<double> GBC = vector<double>(GBC_BIN_NUM, 0.0);
 
   size_t tot_valid_rd_cnt = 0;
   get_exon_rd_cnt(map_g_info, in_rdmap, tot_valid_rd_cnt, GBC);
