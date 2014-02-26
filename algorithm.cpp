@@ -626,6 +626,7 @@ void get_curve_from_hist(const vector<double> & hist_h, const vector<double> & h
   double cur_hist_len = hist_l[idx1];
   double cur_len; 
   for(; idx2 < len_size; ++idx2){
+    area[idx2] = 0.0;
     cur_len = (double)len[idx2] / tot_len * tot_hist_len;
     while(idx1 < hist_size && cur_len > cur_hist_len){
       area[idx2] += cur_hist_len * hist_h[idx1];
