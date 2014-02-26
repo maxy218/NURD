@@ -23,3 +23,17 @@ maxFloat => standard lib max float
 merge the if_valid() and is_valid.
 modify the function of get_exon_read_count
 rewrite the clock code.
+
+the commit f3a36bcb2be56f953e5f7094594896e3a90db071 cannot work very well. it's slightly different with the standard result.
+
+the commits that can work now:
+
+
+
+1:
+2014.02.25: d352de0750457f71f1fe0f4927472b0df549aa5d
+
+2: if fix the bug by renaming the "get_curve_from_bin" to "get_curve_from_hist"
+2014.02.26: e200960828d1f7adb42913694f484b4597a6cb08
+
+3:
