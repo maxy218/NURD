@@ -34,18 +34,7 @@ bool std_output_with_time(const string & s);
 
 vector<string> delimiter(const string & str, char deli);
 
-// if user know that there are N fields, then the vector can be initialized by size N. Maybe could speed up.
-// if there are more than N fields, it will return the first N fields
-////////        can add a parameter to the function, such as flag which is boolean variable, can tell whether there are more than N fields.
-vector<string> delimiter(const string & str, char deli, int N);
-
-////// return the first N fields, if there are more than N fields. If less than N, the extra field are filled by Null value.
-vector<string> delimiter(const string & str, char deli, int N, bool if_head_N);
-
-////// return the first N fields, if there are more than N fields. If less than N, the extra field are filled by Null value.
-////// use the reference to reduce the time consuming.
-void delimiter(vector<string>& t, const string & str, char deli,
-    int N, bool if_head_N);
+void delimiter_ret_ref(const string & str, const char deli, const int N, vector<string> & t);
 
 template<typename T>
 void output_vector(const vector<T> & vec, ostream& out, const char deli){

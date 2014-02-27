@@ -20,7 +20,6 @@
 #include <cstdio>
 #include <ctime>
 #include <fstream>
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -61,9 +60,8 @@ vector<string> delimiter(const string & str, const char deli){
 
 // if user know that there are N fields, then the vector can be initialized by size N. Maybe could speed up.
 // if there are more than N fields, it will return the first N fields
-////////        can add a parameter to the function, such as flag which is boolean variable, can tell whether there are more than N fields.
-vector<string> delimiter(const string & str, const char deli, const int N){
-  vector<string> t = vector<string>(N);
+// return by reference, to speed up
+void delimiter_ret_ref(const string & str, const char deli, const int N, vector<string> & t){
   size_t l_ind = 0;
   size_t r_ind = 0;
   size_t cur_field = 0;
@@ -73,8 +71,7 @@ vector<string> delimiter(const string & str, const char deli, const int N){
     }
     else{
       if(cur_field >= N){
-         cerr << "fatal error!\n"; // should throw some exception.
-         return vector<string>();
+         return; 
       }
       t[cur_field++] = str.substr(l_ind,r_ind-l_ind);
       r_ind++;
@@ -83,60 +80,10 @@ vector<string> delimiter(const string & str, const char deli, const int N){
   }
   if(r_ind != l_ind){
     if(cur_field >= N){
-      cerr << "fatal error!\n"; // should throw some exception.
-      return vector<string>();
+      return;
     }
     t[cur_field++] = str.substr(l_ind,r_ind-l_ind);
   }
-  return t;
-}
-
-////// return the first N fields, if there are more than N fields. If less than N, the extra field are filled by Null value.
-vector<string> delimiter(const string & str, const char deli, const int N, const bool if_head_N){
-  vector<string> t = vector<string>(N);
-  size_t l_ind = 0;
-  size_t r_ind = 0;
-  size_t cur_field = 0;
-  while(str[r_ind] != '\0'){
-    if(str[r_ind] != deli){
-      r_ind++;
-    }
-    else{
-      if(cur_field >= N){
-        break;
-      }
-      t[cur_field++] = str.substr(l_ind,r_ind-l_ind);
-      r_ind++;
-      l_ind = r_ind;
-    }
-  }
-  if(r_ind != l_ind && cur_field < N){
-    t[cur_field++] = str.substr(l_ind, r_ind - l_ind);
-  }
-  return t;
-}
-
-////// return the first N fields, if there are more than N fields. If less than N, the extra field are filled by Null value.
-////// use the reference to reduce the time consuming.
-void delimiter(vector<string>& t, const string & str, const char deli, const int N, const bool if_head_N){
-  size_t l_ind = 0;
-  size_t r_ind = 0;
-  size_t cur_field = 0;
-  while(str[r_ind] != '\0'){
-    if(str[r_ind] != deli){
-      r_ind++;
-    }
-    else{
-      if(cur_field >= N){
-        break;
-      }
-      t[cur_field++] = str.substr(l_ind,r_ind-l_ind);
-      r_ind++;
-      l_ind = r_ind;
-    }
-  }
-  if(r_ind != l_ind && cur_field < N){
-    t[cur_field++] = str.substr(l_ind, r_ind - l_ind);
-  }
+  return;
 }
 

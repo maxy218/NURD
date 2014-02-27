@@ -100,6 +100,7 @@ isoform_anno::isoform_anno():
   exon_ends ( vector<_chr_coor>(0) )
 {}
 
+/*
 isoform_anno::isoform_anno(int anno_type, string line){
   if(anno_type == 1)// refflat annotation format
   {
@@ -135,6 +136,7 @@ isoform_anno::isoform_anno(int anno_type, string line){
     }
   }
 }
+*/
 
 bool if_some_state_on(const vector<bool>& state){
   int iso_num = state.size();

@@ -41,7 +41,6 @@ public:
   vector<_chr_coor> exon_ends;
 
   isoform_anno();
-  isoform_anno(int anno_type, string line);
 };
 
 struct gene_info{

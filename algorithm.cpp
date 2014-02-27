@@ -36,10 +36,55 @@ using namespace std;
 void get_anno_refflat(ifstream& in_anno, map<string, vector<isoform_anno> >& g_iso_anno_map){
   map<string, gene_info>::iterator iter_map_g_anno;
 
-  string temp_line;
-  while(getline(in_anno, temp_line)){
-    isoform_anno g(1, temp_line); //use refflat format annotation file.
-    g_iso_anno_map[g.gene_name].push_back(g);
+  string line;
+  while(getline(in_anno, line)){
+    vector<string> str_vec = delimiter(line,'\t');
+    string gene_name = str_vec[0];
+
+    g_iso_anno_map[gene_name].push_back(isoform_anno());
+    isoform_anno & iso_anno = g_iso_anno_map[gene_name].back();
+
+    iso_anno.gene_name = str_vec[0];
+    iso_anno.name = str_vec[1];
+    iso_anno.chrom = str_vec[2];
+    iso_anno.strand = str_vec[3];
+    iso_anno.tx_start = atoi((str_vec[4]).c_str());
+    iso_anno.tx_end = atoi((str_vec[5]).c_str());
+    iso_anno.cds_start = atoi((str_vec[6]).c_str());
+    iso_anno.cds_end = atoi((str_vec[7]).c_str());
+    iso_anno.exon_cnt = atoi((str_vec[8]).c_str());
+
+    iso_anno.exon_starts = vector<_chr_coor>(iso_anno.exon_cnt);
+    iso_anno.exon_ends = vector<_chr_coor>(iso_anno.exon_cnt);
+
+/*
+    // this method will be 0.1 second faster than the following method.
+    vector<string> pos;
+    pos = delimiter(str_vec[9], ',', iso_anno.exon_cnt);
+    int i = 0;
+    for(iter=pos.begin(); iter != pos.end(); iter++){
+      iso_anno.exon_starts[i++] = atoi((*iter).c_str());
+    }
+
+    pos = delimiter(str_vec[10], ',', iso_anno.exon_cnt);
+    i = 0;
+    for(iter=pos.begin(); iter != pos.end(); iter++){
+      iso_anno.exon_ends[i++] = atoi((*iter).c_str());
+    }
+*/
+
+    size_t idx = 0, exon_cnt = iso_anno.exon_cnt;
+    vector<string> pos = vector<string>(exon_cnt);
+
+    delimiter_ret_ref(str_vec[9], ',', exon_cnt, pos);
+    for(idx = 0; idx < exon_cnt; ++idx){
+      iso_anno.exon_starts[idx] = atoi(pos[idx].c_str());
+    }
+
+    delimiter_ret_ref(str_vec[10], ',', iso_anno.exon_cnt, pos);
+    for(idx = 0; idx < exon_cnt; ++idx){
+      iso_anno.exon_ends[idx] = atoi(pos[idx].c_str());
+    }
   }
 }
 
@@ -48,12 +93,12 @@ void get_anno_refflat(ifstream& in_anno, map<string, vector<isoform_anno> >& g_i
 void get_anno_GTF(ifstream& in_anno, map<string, vector<isoform_anno> >& g_iso_anno_map){
   map<string, gene_info>::iterator iter_map_g_anno;
 
-  string temp_line;
+  string line;
   map<string, isoform_anno> iso_anno_map; // key: transcript name, value: transcript annotation.
   map<string, isoform_anno>::iterator iter_map_iso_anno; // key: transcript name, value: transcript annotation.
-  while(getline(in_anno, temp_line)){
-    vector<string> str_vec = delimiter(temp_line,'\t');
-    vector<string> gene_trans_id_vec = delimiter(str_vec[8],'\"');
+  while(getline(in_anno, line)){
+    vector<string> str_vec = delimiter(line, '\t');
+    vector<string> gene_trans_id_vec = delimiter(str_vec[8], '\"');
 
     _chr_coor start_pos, end_pos;
 
@@ -96,8 +141,8 @@ void get_anno_GTF(ifstream& in_anno, map<string, vector<isoform_anno> >& g_iso_a
     unique(iso_anno.exon_starts.begin(), iso_anno.exon_starts.end());
     unique(iso_anno.exon_ends.begin(), iso_anno.exon_ends.end());
 
-    iso_anno.exon_cnt= iso_anno.exon_starts.size();
-    iso_anno.tx_start= iso_anno.exon_starts[0];
+    iso_anno.exon_cnt = iso_anno.exon_starts.size();
+    iso_anno.tx_start = iso_anno.exon_starts[0];
     iso_anno.tx_end = iso_anno.exon_ends[ iso_anno.exon_cnt - 1 ];
 
     g_iso_anno_map[iso_anno.gene_name].push_back( iso_anno );
@@ -299,8 +344,10 @@ size_t get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
     unsigned int invalid_type = 0;//0: valid, 1: not gene region, 2: not exon region 3: multi gene 4: invalid chrome
 
     //extract the map information from sam file
-    // delimiter(sam_column,temp_line,'\t',4,true); // because only the first 4 fields are used. reduce the time that was
-    delimiter(sam_column, temp_line, '\t', 10, true); // because only the first 10 fields are used. reduce the time that was
+    
+    // because only the first 10 fields are used. reduce the time that was
+    // return by reference, to speed up.
+    delimiter_ret_ref(temp_line, '\t', 10, sam_column); 
     string & chrName = sam_column[2];
     unsigned int read_Flag = atoi(sam_column[1].c_str());
 
