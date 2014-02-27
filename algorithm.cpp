@@ -141,7 +141,7 @@ void output_nurd_file(const vector<double>& GBC, const map<string, gene_info>& m
 
   // output each gene's detail information
   map<string, gene_info>::const_iterator iter_map_g_anno; // const iterator
-  for(iter_map_g_anno = map_g_anno.begin(); iter_map_g_anno != map_g_anno.end(); iter_map_g_anno++){
+  for(iter_map_g_anno = map_g_anno.begin(); iter_map_g_anno != map_g_anno.end(); ++iter_map_g_anno){
     string gene_name = (*iter_map_g_anno).second.gene_name;
 
     //output as "nurd" format
@@ -151,16 +151,82 @@ void output_nurd_file(const vector<double>& GBC, const map<string, gene_info>& m
     out_nurd << (*iter_map_g_anno).second.iso_num << endl;
 
     //second line: isoform name
-    output_vector<string>((*iter_map_g_anno).second.iso_name, out_nurd, '\t');
+    output_vector((*iter_map_g_anno).second.iso_name, out_nurd, '\t');
 
     //third line: exon length
-    output_vector<int>((*iter_map_g_anno).second.exon_len, out_nurd, '\t');
+    output_vector((*iter_map_g_anno).second.exon_len, out_nurd, '\t');
 
     //forth line: read count in exon
-    output_vector<int>((*iter_map_g_anno).second.rd_cnt, out_nurd, '\t');
+    output_vector((*iter_map_g_anno).second.rd_cnt, out_nurd, '\t');
 
     //other lines: gene structure
-    output_2D_vector<int>((*iter_map_g_anno).second.exon_iso_idx, out_nurd, '\t');
+    output_2D_vector((*iter_map_g_anno).second.exon_iso_idx, out_nurd, '\t');
+  }
+}
+
+// get the map relation of (chr -> (pos -> gene))
+void get_map_chr_pos_gene(map<string, gene_info> & map_g_info, 
+    map<string, map<_chr_coor, string> > & map_chr_pos_gene){
+  map<string, gene_info>::iterator iter_map_g_info;
+
+  for(iter_map_g_info = map_g_info.begin(); iter_map_g_info != map_g_info.end(); ++iter_map_g_info){
+    gene_info & g = iter_map_g_info -> second;
+
+    //frist map
+    if(map_chr_pos_gene.find(g.chrom) == map_chr_pos_gene.end()){
+      map_chr_pos_gene[g.chrom] = map<_chr_coor, string>();
+      map_chr_pos_gene[g.chrom][g.g_start] = g.gene_name;
+    }
+    else{
+      map_chr_pos_gene[g.chrom][g.g_start] = g.gene_name;
+    }
+  }
+}
+
+// get the map relation of (chr -> all the start position on this chromosome)
+void get_map_chr_start_pos(map<string, gene_info> & map_g_info,
+    map<string, vector<_chr_coor> > & map_chr_start_pos){
+  map<string, vector<_chr_coor> >::iterator iter_map_chr_pos;
+  map<string, gene_info>::iterator iter_map_g_info;
+
+  for(iter_map_g_info = map_g_info.begin(); iter_map_g_info != map_g_info.end(); ++iter_map_g_info){
+    gene_info & g = iter_map_g_info -> second;
+
+    //second map
+    if(map_chr_start_pos.find(g.chrom) == map_chr_start_pos.end()){
+      map_chr_start_pos[g.chrom] = vector<_chr_coor>(1, g.g_start);
+    }
+    else{
+      map_chr_start_pos[g.chrom].push_back(g.g_start);
+    }
+  }
+
+  //sort the vector before binary search
+  for(iter_map_chr_pos = map_chr_start_pos.begin(); iter_map_chr_pos != map_chr_start_pos.end(); 
+      ++iter_map_chr_pos){
+    sort(iter_map_chr_pos -> second.begin(), iter_map_chr_pos -> second.end());
+  }
+}
+
+// get the map relation of (chr -> all the end position on this chromosome)
+void get_map_chr_end_pos(map<string, gene_info> & map_g_info, map<string, 
+    map<_chr_coor,string> > & map_chr_pos_gene,
+    map<string, vector<_chr_coor> > & map_chr_start_pos,
+    map<string, vector<_chr_coor> > & map_chr_end_pos){
+  map<string, vector<_chr_coor> >::iterator iter_map_chr_pos;
+  // get map_chr_end_pos
+  // because the start pos is sorted, so the correspond end pos can't be sure sorted. So the corresponding vector should be got based on the start pos
+  for(iter_map_chr_pos = map_chr_start_pos.begin(); iter_map_chr_pos != map_chr_start_pos.end();
+      ++iter_map_chr_pos){
+    size_t chr_s_pos_size = iter_map_chr_pos -> second.size();
+    map_chr_end_pos[iter_map_chr_pos -> first] = vector<_chr_coor>(chr_s_pos_size);
+    vector<_chr_coor> & ref_end_pos = map_chr_end_pos[iter_map_chr_pos -> first];
+    vector<_chr_coor> & ref_start_pos = map_chr_end_pos[iter_map_chr_pos -> first];
+    map<_chr_coor, string> & ref_map_pos_gene = map_chr_pos_gene[iter_map_chr_pos -> first];
+    for(size_t i = 0; i < chr_s_pos_size; i++){
+      string & gene_name = ref_map_pos_gene[ iter_map_chr_pos -> second[i] ];
+      ref_end_pos[i] = map_g_info[gene_name].g_end;
+    }
   }
 }
 
@@ -199,66 +265,18 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
 
   //// first key is chr name, second key is gene start pos, second value is gene name. The first value is a map container.
   //// This is map nest definition.
-  map<string, map<int,string> > map_chr_pos_gene;
-  map<string, map<int,string> >::iterator iter_map_chr_pos_gene; // to help judge if some element exists
+  map<string, map<_chr_coor, string> > map_chr_pos_gene;
 
   // the key is chr name, the value is a vector, in which are the gene start positions on this chr.
   // no gene name. Gene names can be easily got from the former hash map.
   // this vector should be sorted before binary search.
-  map<string, vector<int> > map_chr_start_pos_vec;
-  map<string, vector<int> > map_chr_end_pos_vec;
-  map<string, vector<int> >::iterator iter_map_chr_pos_vec;
+  map<string, vector<_chr_coor> > map_chr_start_pos;
+  map<string, vector<_chr_coor> > map_chr_end_pos;
+  map<string, vector<_chr_coor> >::iterator iter_map_chr_pos_vec;
 
-  int start_pos, end_pos;
-  for(iter_map_g_info = map_g_info.begin(); iter_map_g_info != map_g_info.end(); iter_map_g_info++)
-  {
-    gene_info & g = iter_map_g_info -> second;
-
-    //frist map
-    iter_map_chr_pos_gene = map_chr_pos_gene.find(g.chrom);
-    if(iter_map_chr_pos_gene == map_chr_pos_gene.end()){
-      map<int,string> tmp_map;
-      start_pos = g.g_start;
-      tmp_map[start_pos] = g.gene_name;
-
-      map_chr_pos_gene[g.chrom] = tmp_map;
-    }
-    else{
-      start_pos = g.g_start;
-      map_chr_pos_gene[g.chrom][start_pos] = g.gene_name;
-    }
-
-    //second map
-    iter_map_chr_pos_vec = map_chr_start_pos_vec.find(g.chrom);
-    if(iter_map_chr_pos_vec == map_chr_start_pos_vec.end()){
-      vector<int> tmp_vec;
-      start_pos = g.g_start;
-      tmp_vec.push_back(start_pos);
-
-      map_chr_start_pos_vec[g.chrom] = tmp_vec;
-    }
-    else{
-      start_pos = g.g_start;
-      map_chr_start_pos_vec[g.chrom].push_back(start_pos);
-    }
-  }
-
-  //sort the vector before binary search
-  for(iter_map_chr_pos_vec = map_chr_start_pos_vec.begin(); iter_map_chr_pos_vec != map_chr_start_pos_vec.end(); iter_map_chr_pos_vec++){
-    sort((*iter_map_chr_pos_vec).second.begin(),(*iter_map_chr_pos_vec).second.end());
-  }
-
-  // get map_chr_end_pos_vec
-  // because the start pos is sorted, so the correspond end pos can't be sure sorted. So the corresponding vector should be got based on the start pos
-  for(iter_map_chr_pos_vec = map_chr_start_pos_vec.begin(); iter_map_chr_pos_vec != map_chr_start_pos_vec.end(); iter_map_chr_pos_vec++){
-    int chr_s_pos_size = (*iter_map_chr_pos_vec).second.size();
-    vector<int> tmp_ends(chr_s_pos_size);
-    for(int i = 0; i < chr_s_pos_size; i++){
-      string tmp_geneName = map_chr_pos_gene[(*iter_map_chr_pos_vec).first][ (*iter_map_chr_pos_vec).second[i] ];
-      tmp_ends[i] = map_g_info[tmp_geneName].g_end;
-    }
-    map_chr_end_pos_vec[(*iter_map_chr_pos_vec).first] = tmp_ends;
-  }
+  get_map_chr_pos_gene(map_g_info, map_chr_pos_gene);
+  get_map_chr_start_pos(map_g_info, map_chr_start_pos);
+  get_map_chr_end_pos(map_g_info, map_chr_pos_gene, map_chr_start_pos, map_chr_end_pos);
 
   string temp_line;
 
@@ -280,96 +298,92 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
     //extract the map information from sam file
     // delimiter(sam_column,temp_line,'\t',4,true); // because only the first 4 fields are used. reduce the time that was
     delimiter(sam_column, temp_line, '\t', 10, true); // because only the first 10 fields are used. reduce the time that was
-    string chrName = sam_column[2];
-
+    string & chrName = sam_column[2];
     int read_Flag = atoi(sam_column[1].c_str());
-
-    string read_name = sam_column[0];
 
     if(chrName == "*"){
       continue;
     }
-    else{
-      iter_map_chr_pos_vec = map_chr_start_pos_vec.find(chrName);
-      if(iter_map_chr_pos_vec == map_chr_start_pos_vec.end()){
-        continue;
+
+    iter_map_chr_pos_vec = map_chr_start_pos.find(chrName);
+    if(iter_map_chr_pos_vec == map_chr_start_pos.end()){
+      continue;
+    }
+
+    _chr_coor read_pos = atoi(sam_column[3].c_str());
+    if( (read_Flag & RD_FLAG_MASK_REVERSE_MAP) != 0 ){ // reverse read
+      read_pos += sam_column[9].size();
+    }
+
+    vector<int> vec_gene_idx = bin_search_multi(map_chr_start_pos[chrName],map_chr_end_pos[chrName],read_pos);
+
+    if(vec_gene_idx.size() == 0){ // if no gene cover the read, deal with the next read
+      continue;
+    }
+
+    bool if_map_to_gene = false;
+    bool if_multi_map = false;
+    int exon_idx = -1;
+    string g_name;
+    for(size_t idx = 0; idx < vec_gene_idx.size(); ++idx){
+      g_name = map_chr_pos_gene[chrName][ map_chr_start_pos[chrName][ vec_gene_idx[idx] ] ];
+
+      gene_info & g_info = map_g_info[g_name];
+      if(g_info.strand == "+"){
+        exon_idx = bin_search(g_info.exon_start_g, g_info.exon_end_g, read_pos);
+      }
+      ///// if on the negtive strand, should use the reverse search
+      else{
+        exon_idx = bin_search_reverse(g_info.exon_start_g, g_info.exon_end_g, read_pos);
       }
 
-      _chr_coor read_pos = atoi(sam_column[3].c_str());
-      if( (read_Flag & RD_FLAG_MASK_REVERSE_MAP) != 0 ){ // reverse read
-        read_pos += sam_column[9].size();
+      if(exon_idx != -1){
+        if(!if_map_to_gene){
+          if_map_to_gene = true;
+        }
+        else{
+          if_multi_map = true;
+          break;
+        }
       }
+    }
+    if(if_multi_map){
+      continue;
+    }
 
-      vector<int> vec_gene_idx = bin_search_multi(map_chr_start_pos_vec[chrName],map_chr_end_pos_vec[chrName],read_pos);
+    gene_info & g_info = map_g_info[g_name];
+    if(exon_idx != -1){
+      tot_valid_rd_cnt++;
+      int gene_read_pos = -1; // initialized as an invalid position.
+      if(g_info.strand == "+"){
+        g_info.rd_cnt[exon_idx]++;
 
-      if(vec_gene_idx.size() == 0){ // if no gene cover the read, deal with the next read
-        continue;
+        //for GBC, read pos
+        gene_read_pos = g_info.exon_g_start_l[exon_idx] + read_pos - g_info.exon_start_g[exon_idx];
       }
       else{
-        bool if_map_to_gene = false;
-        bool if_multi_map = false;
-        int exon_idx = -1;
-        string g_name;
-        for(size_t idx = 0; idx < vec_gene_idx.size(); ++idx){
-          g_name = map_chr_pos_gene[chrName][ map_chr_start_pos_vec[chrName][ vec_gene_idx[idx] ] ];
+        g_info.rd_cnt[exon_idx]++;
 
-          gene_info & g_info = map_g_info[g_name];
-          if(g_info.strand == "+"){
-            exon_idx = bin_search(g_info.exon_start_g, g_info.exon_end_g, read_pos);
-          }
-          ///// if on the negtive strand, should use the reverse search
-          else{
-            exon_idx = bin_search_reverse(g_info.exon_start_g, g_info.exon_end_g, read_pos);
-          }
+        //for GBC, read pos
+        // still exon_g_start_l, if you figure out, it's obvious.
+        gene_read_pos = g_info.exon_g_start_l[exon_idx] + g_info.exon_end_g[exon_idx] - read_pos;
+      }
 
-          if(exon_idx!=-1){
-            if(!if_map_to_gene){
-              if_map_to_gene = true;
-            }
-            else{
-              if_multi_map = true;
-              break;
-            }
-          }
+      //For GBC
+      //only use the genes with single isoform
+      if(g_info.iso_name.size() == 1)
+      {
+        int gene_len = g_info.g_len;
+        if( gene_read_pos < gene_len && gene_read_pos >= 0 ){
+          int_GBC[ (int)(gene_read_pos*GBC_BIN_NUM)/gene_len ]++;
         }
-        if(!if_multi_map){
-          gene_info & g_info = map_g_info[g_name];
-          if(exon_idx != -1){
-            tot_valid_rd_cnt++;
-            int gene_read_pos = -1; // initialized as an invalid position.
-            if(g_info.strand == "+"){
-              g_info.rd_cnt[exon_idx]++;
-
-              //for GBC, read pos
-              gene_read_pos = g_info.exon_g_start_l[exon_idx] + read_pos - g_info.exon_start_g[exon_idx];
-            }
-            else{
-              g_info.rd_cnt[exon_idx]++;
-
-              //for GBC, read pos
-              // still exon_g_start_l, if you figure out, it's obvious.
-              gene_read_pos = g_info.exon_g_start_l[exon_idx] + g_info.exon_end_g[exon_idx] - read_pos;
-            }
-
-            //For GBC
-            //only use the genes with single isoform
-            if(g_info.iso_name.size() == 1)
-            {
-              int gene_len = g_info.g_len;
-              if( gene_read_pos < gene_len && gene_read_pos >= 0 ){
-                int_GBC[ (int)(gene_read_pos*GBC_BIN_NUM)/gene_len ]++;
-              }
-              else if(gene_read_pos == gene_len){
-                int_GBC[ GBC_BIN_NUM-1 ]++;
-              }
-              else{
-                outlier_read_cnt++;
-              }
-            }
-          }
+        else if(gene_read_pos == gene_len){
+          int_GBC[ GBC_BIN_NUM-1 ]++;
+        }
+        else{
+          outlier_read_cnt++;
         }
       }
-      continue;
     }
   }while(getline(in_rdmap,temp_line));
   //////////  read count ends!
@@ -398,7 +412,7 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
   }
 
   //output the information to nurd file.
-  output_nurd_file(GBC, map_g_info, tot_valid_rd_cnt, out_nurd);
+//  output_nurd_file(GBC, map_g_info, tot_valid_rd_cnt, out_nurd);
 
   return 0;
 }
