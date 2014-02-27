@@ -17,15 +17,14 @@
  */
 
 
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <vector>
-#include <list>
-#include <stdlib.h>
 #include <algorithm>
+#include <cstdlib>
+#include <list>
 #include <map>
 #include <set>
+#include <string>
+#include <vector>
+
 #include "common.h"
 #include "const.h"
 #include "class.h"

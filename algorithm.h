@@ -20,15 +20,14 @@
 #ifndef ALGORITHM2_H_INCLUDED
 #define ALGORITHM2_H_INCLUDED
 
+#include <cmath>
 #include <fstream>
+#include <map>
 #include <vector>
-#include <iostream>
-#include <sstream>
-#include <math.h>
 
 #include "class.h"
-#include "const.h"
 #include "common.h"
+#include "const.h"
 
 using namespace std;
 

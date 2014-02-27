@@ -20,15 +20,9 @@
 #ifndef CLASS_H_INCLUDED
 #define CLASS_H_INCLUDED
 
-#include <fstream>
-#include <iostream>
 #include <string>
 #include <vector>
-#include <list>
-#include <stdlib.h>
-#include <algorithm>
-#include <map>
-#include "common.h"
+
 #include "const.h"
 using namespace std;
 

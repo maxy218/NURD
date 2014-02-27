@@ -17,14 +17,9 @@
  */
 
 
-#include <algorithm>
-#include <cerrno>   // error information
 #include <cstdlib>
-#include <cstring>  // strerror
-#include <ctime>
 #include <fstream>
 #include <iostream>
-#include <list>
 #include <map>
 #include <sstream>
 #include <stdexcept>
@@ -67,7 +62,7 @@ string get_file_name(const string& dir, int& flag){
       return "";
     }
     size_t length = 0;
-    int i = dir.size() - 1;
+    int i = (int)dir.size() - 1;
     for(; i >= 0 ; i--){
       if( dir[i] == '\\' || dir[i] == '/' ){
         break;
@@ -83,10 +78,9 @@ string get_file_name(const string& dir, int& flag){
 }
 
 // create directory.
-int create_dir(const string&  dirName)
+int create_dir(const string& dirName)
 {
   string dir = dirName + "/";
-
   for( int i=1; i < dir.length(); i++)
   {
     if(dir[i] == '/')
@@ -94,7 +88,7 @@ int create_dir(const string&  dirName)
       dir[i] = 0;
       if( access(dir.c_str(), F_OK) != 0 )
       {
-      if(mkdir(dir.c_str(), 0755) == -1) // mode 755 means: rwxr-xr-x
+        if(mkdir(dir.c_str(), 0755) == -1) // mode 755 means: rwxr-xr-x
         {
           return -1;
         }
@@ -108,7 +102,7 @@ int create_dir(const string&  dirName)
 int main(int argc, char**argv)
 {
   // parsing argument
-  map<string,string> argu_parse_result = map<string,string>();
+  map<string,string> argu_parse_result;
   map<string,string>::iterator argu_parse_iterator;
 
   ifstream in_anno; // annotation file.
@@ -122,7 +116,7 @@ int main(int argc, char**argv)
   string out_nurd_name;
   string out_expr_name;
 
-  int anno_choice = 2; // choice of annotation: 1: refflat, 2: GTF
+  unsigned int anno_choice = 2; // choice of annotation: 1: refflat, 2: GTF
   double alpha = 0.5; // weight of GBC and LBC. 0.5 as default.
 
   try

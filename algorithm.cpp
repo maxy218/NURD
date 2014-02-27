@@ -17,18 +17,18 @@
  */
 
 
-
-#include <fstream>
-#include <vector>
-#include <iostream>
-#include <sstream>
 #include <algorithm>
-#include <math.h>
+#include <cmath>
+#include <fstream>
+#include <iostream>
+#include <map>
+#include <sstream>
+#include <vector>
 
-#include "class.h"
-#include "const.h"
-#include "common.h"
 #include "algorithm.h"
+#include "class.h"
+#include "common.h"
+#include "const.h"
 
 using namespace std;
 
@@ -235,7 +235,6 @@ void get_map_chr_end_pos(map<string, gene_info> & map_g_info, map<string,
 }
 
 // get the read count of each exon
-ofstream out_nurd("tmp_nurd.txt");
 size_t get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap, 
     size_t & tot_valid_rd_cnt, vector<double> & GBC){
   clock_t start_time,end_time;

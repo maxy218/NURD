@@ -17,12 +17,10 @@
  */
 
 
-#include <cerrno> 	// error information
 #include <cstdio>
-#include <cstring>	// strerror
 #include <ctime>
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -33,15 +31,15 @@
 
 using namespace std;
 
-bool std_output_with_time(string s)
+bool std_output_with_time(const string & s)
 {
   time_t cur_time;
   time(&cur_time);
-  printf("[%15.15s]:\t%s",ctime(&cur_time)+4,s.c_str());
+  printf("[%15.15s]:\t%s", ctime(&cur_time)+4, s.c_str());
 }
 
 //delimeter
-vector<string> delimiter(string str, const char deli){
+vector<string> delimiter(const string & str, const char deli){
   vector<string> t;
   size_t l_ind = 0;
   size_t r_ind = 0;
@@ -64,7 +62,7 @@ vector<string> delimiter(string str, const char deli){
 // if user know that there are N fields, then the vector can be initialized by size N. Maybe could speed up.
 // if there are more than N fields, it will return the first N fields
 ////////        can add a parameter to the function, such as flag which is boolean variable, can tell whether there are more than N fields.
-vector<string> delimiter(string str, const char deli, const int N){
+vector<string> delimiter(const string & str, const char deli, const int N){
   vector<string> t = vector<string>(N);
   size_t l_ind = 0;
   size_t r_ind = 0;
@@ -94,7 +92,7 @@ vector<string> delimiter(string str, const char deli, const int N){
 }
 
 ////// return the first N fields, if there are more than N fields. If less than N, the extra field are filled by Null value.
-vector<string> delimiter(string str, const char deli, const int N, const bool if_head_N){
+vector<string> delimiter(const string & str, const char deli, const int N, const bool if_head_N){
   vector<string> t = vector<string>(N);
   size_t l_ind = 0;
   size_t r_ind = 0;
@@ -120,7 +118,7 @@ vector<string> delimiter(string str, const char deli, const int N, const bool if
 
 ////// return the first N fields, if there are more than N fields. If less than N, the extra field are filled by Null value.
 ////// use the reference to reduce the time consuming.
-void delimiter(vector<string>& t, string str, const char deli, const int N, const bool if_head_N){
+void delimiter(vector<string>& t, const string & str, const char deli, const int N, const bool if_head_N){
   size_t l_ind = 0;
   size_t r_ind = 0;
   size_t cur_field = 0;

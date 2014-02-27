@@ -20,8 +20,6 @@
 #ifndef CONST_H_INCLUDED
 #define CONST_H_INCLUDED
 
-#include <vector>
-#include <string>
 using namespace std;
 
 extern const double EPSILON;

@@ -17,9 +17,8 @@
  */
 
 
-#include <vector>
-#include <string>
 #include "const.h"
+
 using namespace std;
 
 const double EPSILON = 1e-10;
