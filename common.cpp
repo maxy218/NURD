@@ -34,7 +34,7 @@ bool std_output_with_time(const string & s)
 {
   time_t cur_time;
   time(&cur_time);
-  printf("[%15.15s]:\t%s", ctime(&cur_time)+4, s.c_str());
+  printf("[%15.15s]:  %s", ctime(&cur_time)+4, s.c_str());
 }
 
 //delimeter

@@ -634,8 +634,8 @@ void get_curve_from_hist(const vector<double> & hist_h, const vector<double> & h
 
   size_t hist_size = hist_h.size();
   size_t len_size = len.size();
-  size_t tot_hist_len = sum_vector(hist_l);
-  size_t tot_len = sum_vector(len);
+  double tot_hist_len = sum_vector(hist_l);
+  double tot_len = sum_vector(len);
 
   for(size_t i = 0; i < len_size; i++){
     area[i] = 0.0;
@@ -646,7 +646,7 @@ void get_curve_from_hist(const vector<double> & hist_h, const vector<double> & h
   double cur_len; 
   for(; idx2 < len_size; ++idx2){
     area[idx2] = 0.0;
-    cur_len = (double)len[idx2] / tot_len * tot_hist_len;
+    cur_len = len[idx2] / tot_len * tot_hist_len;
     while(idx1 < hist_size && cur_len > cur_hist_len){
       area[idx2] += cur_hist_len * hist_h[idx1];
       cur_len -= cur_hist_len;

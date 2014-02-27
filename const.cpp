@@ -22,6 +22,6 @@
 using namespace std;
 
 const double EPSILON = 1e-10;
-const int MAX_ITER_NUM = (int)1e5;
+const int MAX_ITER_NUM = 10000;
 const int GBC_BIN_NUM = 10;
 

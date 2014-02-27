@@ -107,8 +107,6 @@ int main(int argc, char**argv)
 
   ifstream in_anno; // annotation file.
   ifstream in_rdmap; // reads mapping file.
-  ofstream out_nurd; // tmp file. nurd file.
-  ifstream in_nurd; // tmp file. nurd file.
   ofstream out_expr; // expression estimation file.
 
   string in_anno_name;
@@ -231,91 +229,37 @@ int main(int argc, char**argv)
   }
 
   out_nurd_name = argu_parse_result["O"] + in_rdmap_name_no_dir + ".nurd";
-  std_output_with_time("sam file:\t" + out_nurd_name + "\n");
+  std_output_with_time("sam file: " + out_nurd_name + "\n");
   out_expr_name = out_nurd_name + ".all_expr";
-  std_output_with_time("expression file:\t" + out_expr_name + "\n");
-
-
-  try{
-    out_nurd.open(out_nurd_name.c_str());
-    if(!out_nurd.is_open()){
-      throw runtime_error("can not open nurd file! Please check whether there exists the nurd file.");
-    }
-  }
-  catch(runtime_error err){
-    cerr << "Exception catched:" << "\t";
-    cerr << err.what() << endl << endl;
-    return 1;
-  }
+  std_output_with_time("expression file: " + out_expr_name + "\n");
 
   map<string, gene_info> map_g_info;
   get_anno_info(in_anno, anno_choice, map_g_info);
 
-  cout << "number of genes with anno:" << map_g_info.size() << endl;
-
   vector<double> GBC = vector<double>(GBC_BIN_NUM, 0.0);
-
   size_t tot_valid_rd_cnt = 0;
   get_exon_rd_cnt(map_g_info, in_rdmap, tot_valid_rd_cnt, GBC);
 
 
+  out_expr.open(out_expr_name.c_str());
 
+  time_t esti_start, esti_end;
+  esti_start = clock();
+  calcuAllTheGenes(map_g_info, tot_valid_rd_cnt, alpha, GBC, out_expr);
+  esti_end = clock();
 
-        out_nurd.close();
+  ss<<"expression estimation time: "<<((double)esti_end-esti_start)/CLOCKS_PER_SEC<<" seconds.\n";
+  std_output_with_time(ss.str());
+  ss.str("");
 
-        //expression estimation
-        try{
-                in_nurd.open(out_nurd_name.c_str());
-                if(! in_nurd){
-                        throw runtime_error("can not open nurd file! Please check whether there exists the nurd file.");
-                }
-        }
-        catch(runtime_error err){
-                cerr<<"Exception catched:"<<"\t";
-                cerr<<err.what()<<endl<<endl;
-                return 1;
-        }
+  ss<<"expression done!"<<endl;
+  std_output_with_time(ss.str());
+  ss.str("");
 
+  end_time = clock();
+  ss << "total time: " << ((double)end_time-start_time)/CLOCKS_PER_SEC << " seconds." <<endl;
+  std_output_with_time(ss.str());
+  ss.str("");
 
-        out_expr.open(out_expr_name.c_str());
-
-        time_t esti_start, esti_end;
-        esti_start = clock();
-        calcuAllTheGenes(map_g_info, tot_valid_rd_cnt, alpha, GBC, out_expr);
-        esti_end = clock();
-
-        ss<<"expression estimation time:\t"<<((double)esti_end-esti_start)/CLOCKS_PER_SEC<<" seconds.\n";
-    std_output_with_time(ss.str());
-    ss.str("");
-
-    ss<<"expression done!"<<endl;
-    std_output_with_time(ss.str());
-    ss.str("");
-
-        end_time = clock();
-    ss << "total time:\t" << ((double)end_time-start_time)/CLOCKS_PER_SEC << " seconds." <<endl;
-    std_output_with_time(ss.str());
-    ss.str("");
-
-    return 0;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return 0;
 }
