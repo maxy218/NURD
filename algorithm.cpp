@@ -190,7 +190,6 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
   //gene read count begins
   ////////////////////////////////////////
   /////// read count starts!
-  int tot_rd_cnt = 0;
   tot_valid_rd_cnt = 0;
 
   // bin number in GBC. GBC is calculated at the same time of reads counting.
@@ -276,7 +275,6 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
   vector<string> sam_column = vector<string>(10);
 
   do{
-    tot_rd_cnt++;
     int invalid_type = 0;//0: valid, 1: not gene region, 2: not exon region 3: multi gene 4: invalid chrome
 
     //extract the map information from sam file
@@ -405,6 +403,45 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
   return 0;
 }
 
+double get_log_likelihood(const gene_info& g){
+  int N = g.exon_num;
+  int M = g.iso_num;
+
+  double likeli = 0.0;
+  for(int j = 0; j < N; j++){
+    double tempSum1 = 0.0;
+    double tempSum2 = 0.0;
+    for(int i = 0; i < M; i++){
+      double tmp_double = 0.0;
+      tmp_double = g.c[i*N+j] * g.theta[i];
+      tempSum1 += g.exon_len[j] * tmp_double;
+      tempSum2 += tmp_double;
+    }
+    likeli = likeli - g.tot_rd_cnt*tempSum1 + g.rd_cnt[j]*log(g.exon_len[j]*g.tot_rd_cnt*tempSum2+EPSILON);
+  }
+  return likeli;
+}
+
+double get_gradient_of_log_likelihood(const gene_info& g, int i){
+  int N = g.exon_num;
+  int M = g.iso_num;
+
+  double gradient = 0.0;
+  for(int j = 0; j < N; j++){
+    gradient -= g.tot_rd_cnt*g.exon_len[j]*g.c[i*N+j];
+    if(g.rd_cnt[j]*g.c[i*N+j] != 0)
+    {
+      double tmp_sum = EPSILON;
+      for(int k = 0; k < M; k++)
+      {
+        tmp_sum += g.c[k*N+j]*g.theta[k];
+      }
+      gradient += g.rd_cnt[j]*g.c[i*N+j]/tmp_sum;
+    }
+  }
+  return gradient;
+}
+
 void max_isoform_bisearch(gene_info& g, int k){
   const double LOCAL_EPSILON = 1e-8;
   const double LOCAL_EPSILON_GRADIENT = 1e-8;
@@ -486,6 +523,9 @@ double max_likelihood_given_C(gene_info& g){
   return f_value;
 }
 
+void get_GBC_matrix(gene_info& g, const vector<double> & GBC);
+void get_LBC_matrix(gene_info& g);
+
 double max_likelihood(gene_info& g, double alpha, const vector<double> & GBC){
   int M = g.iso_num;
   int N = g.exon_num;
@@ -500,46 +540,6 @@ double max_likelihood(gene_info& g, double alpha, const vector<double> & GBC){
     }
   }
   return max_likelihood_given_C(g);
-}
-
-double get_log_likelihood(const gene_info& g){
-  int N = g.exon_num;
-  int M = g.iso_num;
-
-  double likeli = 0.0;
-  for(int j = 0; j < N; j++){
-    double tempSum1 = 0.0;
-    double tempSum2 = 0.0;
-    for(int i = 0; i < M; i++){
-      double tmp_double = 0.0;
-      tmp_double = g.c[i*N+j] * g.theta[i];
-      tempSum1 += g.exon_len[j] * tmp_double;
-      tempSum2 += tmp_double;
-    }
-    likeli = likeli - g.tot_rd_cnt*tempSum1 + g.rd_cnt[j]*log(g.exon_len[j]*g.tot_rd_cnt*tempSum2+EPSILON);
-  }
-
-  return likeli;
-}
-
-double get_gradient_of_log_likelihood(const gene_info& g, int i){
-  int N = g.exon_num;
-  int M = g.iso_num;
-
-  double gradient = 0.0;
-  for(int j = 0; j < N; j++){
-    gradient -= g.tot_rd_cnt*g.exon_len[j]*g.c[i*N+j];
-    if(g.rd_cnt[j]*g.c[i*N+j] != 0)
-    {
-      double tmp_sum = EPSILON;
-      for(int k = 0; k < M; k++)
-      {
-        tmp_sum += g.c[k*N+j]*g.theta[k];
-      }
-      gradient += g.rd_cnt[j]*g.c[i*N+j]/tmp_sum;
-    }
-  }
-  return gradient;
 }
 
 void get_LBC_curve(gene_info& g, vector<double>& LBC){
@@ -562,55 +562,6 @@ void get_LBC_curve(gene_info& g, vector<double>& LBC){
 
   for(int j = 0; j < N; j++){
     LBC[j] = LBC[j]*N/LBC_sum;
-  }
-}
-
-void get_LBC_matrix(gene_info& g){
-  int M = g.iso_num;
-  int N = g.exon_num;
-
-  vector<double> LBC_h = vector<double>(N, 0.0);
-  vector<double> LBC_l = vector<double>(N, 0.0);
-  get_LBC_curve(g, LBC_h);
-
-  vector<double> area= vector<double>(N, 0.0);
-  vector<double> len = vector<double>(N, 0);
-
-  for(int j = 0; j < N; j++){
-    for(int i = 0; i < M; i++){
-      LBC_l[j] += g.exon_iso_idx[i][j];
-    }
-    LBC_l[j] *= g.exon_len[j];
-  }
-
-  for(int i = 0; i < M; i++){
-    for(int j = 0; j < N; j++){
-      len[j] = (double)g.exon_len[j]*g.exon_iso_idx[i][j];
-    }
-    get_curve_from_hist(LBC_h, LBC_l, len, area);
-    double tot_area = sum_vector(area);
-    for(int j = 0; j < N; j++){
-      g.LBC[i*N+j] = area[j] * GBC_BIN_NUM / tot_area;
-    }
-  }
-}
-
-void get_GBC_matrix(gene_info& g, const vector<double> & GBC){
-  int M = g.iso_num;
-  int N = g.exon_num;
-  vector<double> area = vector<double>(N, 0);
-  vector<double> len = vector<double>(N, 0);
-  vector<double> GBC_l = vector<double>(GBC_BIN_NUM, 1);
- 
-  for(int i = 0; i < M; i++){
-    for(int j = 0; j < N; j++){
-      len[j] = g.exon_len[j]*g.exon_iso_idx[i][j];
-    }
-    get_curve_from_hist(GBC, GBC_l, len, area);
-    double tot_area = sum_vector(area);
-    for(int j = 0; j < N; j++){
-      g.GBC[i*N+j] = area[j];
-    }
   }
 }
 
@@ -642,6 +593,55 @@ void get_curve_from_hist(const vector<double> & hist_h, const vector<double> & h
     }
     area[idx2] += cur_len * hist_h[idx1];
     cur_hist_len -= cur_len;
+  }
+}
+
+void get_GBC_matrix(gene_info& g, const vector<double> & GBC){
+  int M = g.iso_num;
+  int N = g.exon_num;
+  vector<double> area = vector<double>(N, 0);
+  vector<double> len = vector<double>(N, 0);
+  vector<double> GBC_l = vector<double>(GBC_BIN_NUM, 1);
+ 
+  for(int i = 0; i < M; i++){
+    for(int j = 0; j < N; j++){
+      len[j] = g.exon_len[j]*g.exon_iso_idx[i][j];
+    }
+    get_curve_from_hist(GBC, GBC_l, len, area);
+    double tot_area = sum_vector(area);
+    for(int j = 0; j < N; j++){
+      g.GBC[i*N+j] = area[j];
+    }
+  }
+}
+
+void get_LBC_matrix(gene_info& g){
+  int M = g.iso_num;
+  int N = g.exon_num;
+
+  vector<double> LBC_h = vector<double>(N, 0.0);
+  vector<double> LBC_l = vector<double>(N, 0.0);
+  get_LBC_curve(g, LBC_h);
+
+  vector<double> area= vector<double>(N, 0.0);
+  vector<double> len = vector<double>(N, 0);
+
+  for(int j = 0; j < N; j++){
+    for(int i = 0; i < M; i++){
+      LBC_l[j] += g.exon_iso_idx[i][j];
+    }
+    LBC_l[j] *= g.exon_len[j];
+  }
+
+  for(int i = 0; i < M; i++){
+    for(int j = 0; j < N; j++){
+      len[j] = (double)g.exon_len[j]*g.exon_iso_idx[i][j];
+    }
+    get_curve_from_hist(LBC_h, LBC_l, len, area);
+    double tot_area = sum_vector(area);
+    for(int j = 0; j < N; j++){
+      g.LBC[i*N+j] = area[j] * GBC_BIN_NUM / tot_area;
+    }
   }
 }
 
