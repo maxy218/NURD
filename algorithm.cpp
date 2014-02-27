@@ -62,12 +62,15 @@ void get_anno_GTF(ifstream& in_anno, map<string, vector<isoform_anno> >& g_iso_a
       start_pos = atoi(str_vec[3].c_str()) - 1; // "-1" is because the GTF starts from 1, not 0 (which is refFlat style.)
       end_pos = atoi(str_vec[4].c_str()); // the end position is the same with refflat.
 
-      string iso_chr_combined = gene_trans_id_vec[3] + "\t" + str_vec[0]; // trans name and chr name are needed to identify a transcript. some trans may come from different chromosome.
+      // trans name and chr name are needed to identify a transcript.
+      // some trans may come from different chromosome.
+      string iso_chr_combined = gene_trans_id_vec[3] + "\t" + str_vec[0]; 
 
-      if(iso_anno_map.find( iso_chr_combined ) != iso_anno_map.end()) // if has been dealt before.
+      // if has been dealt before.
+      if( (iter_map_iso_anno = iso_anno_map.find(iso_chr_combined)) != iso_anno_map.end()) 
       {
-        iso_anno_map[ iso_chr_combined ].exon_starts.push_back(start_pos);
-        iso_anno_map[ iso_chr_combined ].exon_ends.push_back(end_pos);
+        iter_map_iso_anno -> second.exon_starts.push_back(start_pos);
+        iter_map_iso_anno -> second.exon_ends.push_back(end_pos);
       }
       else // this trans has not been dealt.
       {
@@ -101,7 +104,8 @@ void get_anno_GTF(ifstream& in_anno, map<string, vector<isoform_anno> >& g_iso_a
   }
 }
 
-void get_anno_info(ifstream & in_anno, const int anno_choice, map<string, gene_info> & map_g_anno){
+void get_anno_info(ifstream & in_anno, const unsigned int anno_choice, 
+    map<string, gene_info> & map_g_anno){
   map<string, gene_info>::iterator iter_map_g_anno;
   map<string, vector<isoform_anno> > g_iso_anno_map;
   map<string, vector<isoform_anno> >::iterator iter_g_iso;
@@ -131,7 +135,7 @@ void get_anno_info(ifstream & in_anno, const int anno_choice, map<string, gene_i
 
 // output the data to the nurd file, which is a temporary file.
 void output_nurd_file(const vector<double>& GBC, const map<string, gene_info>& map_g_anno, 
-    int tot_valid_rd_cnt, ofstream& out_nurd){
+    size_t tot_valid_rd_cnt, ofstream& out_nurd){
   // output GBC curve
   output_vector<double>(GBC, out_nurd, '\t');
 
@@ -232,7 +236,7 @@ void get_map_chr_end_pos(map<string, gene_info> & map_g_info, map<string,
 
 // get the read count of each exon
 ofstream out_nurd("tmp_nurd.txt");
-int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap, 
+size_t get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap, 
     size_t & tot_valid_rd_cnt, vector<double> & GBC){
   clock_t start_time,end_time;
   time_t cur_time;
@@ -261,7 +265,7 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
   // bin number in GBC. GBC is calculated at the same time of reads counting.
   vector<int> int_GBC = vector<int>(GBC_BIN_NUM, 0);
 
-  int outlier_read_cnt = 0;
+  size_t outlier_read_cnt = 0;
 
   //// first key is chr name, second key is gene start pos, second value is gene name. The first value is a map container.
   //// This is map nest definition.
@@ -288,18 +292,18 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
     }
   }
   //deal with mapped reads
-  int RD_FLAG_MASK_REVERSE_MAP = 0x10;
+  unsigned int RD_FLAG_MASK_REVERSE_MAP = 0x10;
   // vector<string> sam_column = vector<string>(4);
   vector<string> sam_column = vector<string>(10);
 
   do{
-    int invalid_type = 0;//0: valid, 1: not gene region, 2: not exon region 3: multi gene 4: invalid chrome
+    unsigned int invalid_type = 0;//0: valid, 1: not gene region, 2: not exon region 3: multi gene 4: invalid chrome
 
     //extract the map information from sam file
     // delimiter(sam_column,temp_line,'\t',4,true); // because only the first 4 fields are used. reduce the time that was
     delimiter(sam_column, temp_line, '\t', 10, true); // because only the first 10 fields are used. reduce the time that was
     string & chrName = sam_column[2];
-    int read_Flag = atoi(sam_column[1].c_str());
+    unsigned int read_Flag = atoi(sam_column[1].c_str());
 
     if(chrName == "*"){
       continue;
@@ -373,7 +377,7 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
       //only use the genes with single isoform
       if(g_info.iso_name.size() == 1)
       {
-        int gene_len = g_info.g_len;
+        _chr_coor gene_len = g_info.g_len;
         if( gene_read_pos < gene_len && gene_read_pos >= 0 ){
           int_GBC[ (int)(gene_read_pos*GBC_BIN_NUM)/gene_len ]++;
         }
@@ -392,10 +396,10 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
   //////////////////////////////////
   //////// get GBC
   double total_GBC = 0;
-  for(int i = 0; i < GBC_BIN_NUM; i++){
+  for(size_t i = 0; i < GBC_BIN_NUM; i++){
     total_GBC += int_GBC[i];
   }
-  for(int i = 0; i < GBC_BIN_NUM; i++){
+  for(size_t i = 0; i < GBC_BIN_NUM; i++){
     GBC[i] = ((double)int_GBC[i]*GBC_BIN_NUM)/total_GBC;
   }
   //////////////////////////////////
@@ -418,14 +422,14 @@ int get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
 }
 
 double get_log_likelihood(const gene_info& g){
-  int N = g.exon_num;
-  int M = g.iso_num;
+  size_t N = g.exon_num;
+  size_t M = g.iso_num;
 
   double likeli = 0.0;
-  for(int j = 0; j < N; j++){
+  for(size_t j = 0; j < N; j++){
     double tempSum1 = 0.0;
     double tempSum2 = 0.0;
-    for(int i = 0; i < M; i++){
+    for(size_t i = 0; i < M; i++){
       double tmp_double = 0.0;
       tmp_double = g.c[i*N+j] * g.theta[i];
       tempSum1 += g.exon_len[j] * tmp_double;
@@ -436,17 +440,17 @@ double get_log_likelihood(const gene_info& g){
   return likeli;
 }
 
-double get_gradient_of_log_likelihood(const gene_info& g, int i){
-  int N = g.exon_num;
-  int M = g.iso_num;
+double get_gradient_of_log_likelihood(const gene_info& g, size_t i){
+  size_t N = g.exon_num;
+  size_t M = g.iso_num;
 
   double gradient = 0.0;
-  for(int j = 0; j < N; j++){
+  for(size_t j = 0; j < N; j++){
     gradient -= g.tot_rd_cnt*g.exon_len[j]*g.c[i*N+j];
     if(g.rd_cnt[j]*g.c[i*N+j] != 0)
     {
       double tmp_sum = EPSILON;
-      for(int k = 0; k < M; k++)
+      for(size_t k = 0; k < M; k++)
       {
         tmp_sum += g.c[k*N+j]*g.theta[k];
       }
@@ -456,14 +460,14 @@ double get_gradient_of_log_likelihood(const gene_info& g, int i){
   return gradient;
 }
 
-void max_isoform_bisearch(gene_info& g, int k){
+void max_isoform_bisearch(gene_info& g, size_t k){
   const double LOCAL_EPSILON = 1e-8;
   const double LOCAL_EPSILON_GRADIENT = 1e-8;
   double left, right;
 
   double effective_iso_len = 0.0;
-  int N = g.exon_num;
-  for(int j = 0; j < N; j++)
+  size_t N = g.exon_num;
+  for(size_t j = 0; j < N; j++)
   {
     effective_iso_len += g.c[k*N+j]*g.exon_len[j];
   }
@@ -511,13 +515,13 @@ void max_isoform_bisearch(gene_info& g, int k){
 }
 
 double max_likelihood_given_C(gene_info& g){
-  int M = g.iso_num;
+  size_t M = g.iso_num;
 
   double f_value = get_log_likelihood(g);
-  int iteration = 0;
+  size_t iteration = 0;
 
   while(true){
-    for(int i = 0; i < M; i++){
+    for(size_t i = 0; i < M; i++){
       max_isoform_bisearch(g, i);
     }
 
@@ -541,14 +545,14 @@ void get_GBC_matrix(gene_info& g, const vector<double> & GBC);
 void get_LBC_matrix(gene_info& g);
 
 double max_likelihood(gene_info& g, double alpha, const vector<double> & GBC){
-  int M = g.iso_num;
-  int N = g.exon_num;
+  size_t M = g.iso_num;
+  size_t N = g.exon_num;
 
   get_GBC_matrix(g, GBC);
   get_LBC_matrix(g);
   double rel_len = 0; // relative length
-  for(int i = 0; i < M; i++){
-    for(int j = 0; j < N; j++){
+  for(size_t i = 0; i < M; i++){
+    for(size_t j = 0; j < N; j++){
       rel_len = (double)g.exon_len[j]/g.iso_len[i];
       g.c[i*N+j] = ( g.GBC[i*N+j]*alpha + g.LBC[i*N+j]*(1-alpha) )/rel_len/GBC_BIN_NUM;
     }
@@ -557,14 +561,14 @@ double max_likelihood(gene_info& g, double alpha, const vector<double> & GBC){
 }
 
 void get_LBC_curve(gene_info& g, vector<double>& LBC){
-  int M = g.iso_num;
-  int N = g.exon_num;
+  size_t M = g.iso_num;
+  size_t N = g.exon_num;
 
   double tempSum = 0.0;
   double LBC_sum = 0.0;
-  for(int j = 0; j < N; j++){
+  for(size_t j = 0; j < N; j++){
     tempSum = 0.0;
-    for(int i = 0; i < M; i++){
+    for(size_t i = 0; i < M; i++){
       tempSum += g.theta[i]*g.a[i*N+j];
     }
     if(tempSum < EPSILON){
@@ -574,7 +578,7 @@ void get_LBC_curve(gene_info& g, vector<double>& LBC){
     LBC_sum += LBC[j];
   }
 
-  for(int j = 0; j < N; j++){
+  for(size_t j = 0; j < N; j++){
     LBC[j] = LBC[j]*N/LBC_sum;
   }
 }
@@ -582,10 +586,10 @@ void get_LBC_curve(gene_info& g, vector<double>& LBC){
 void get_curve_from_hist(const vector<double> & hist_h, const vector<double> & hist_l,
     const vector<double> & len, vector<double>& area){
 
-  int hist_size = hist_h.size();
-  int len_size = len.size();
-  int tot_hist_len = sum_vector(hist_l);
-  int tot_len = sum_vector(len);
+  size_t hist_size = hist_h.size();
+  size_t len_size = len.size();
+  size_t tot_hist_len = sum_vector(hist_l);
+  size_t tot_len = sum_vector(len);
 
   for(size_t i = 0; i < len_size; i++){
     area[i] = 0.0;
@@ -611,27 +615,27 @@ void get_curve_from_hist(const vector<double> & hist_h, const vector<double> & h
 }
 
 void get_GBC_matrix(gene_info& g, const vector<double> & GBC){
-  int M = g.iso_num;
-  int N = g.exon_num;
+  size_t M = g.iso_num;
+  size_t N = g.exon_num;
   vector<double> area = vector<double>(N, 0);
   vector<double> len = vector<double>(N, 0);
   vector<double> GBC_l = vector<double>(GBC_BIN_NUM, 1);
  
-  for(int i = 0; i < M; i++){
-    for(int j = 0; j < N; j++){
+  for(size_t i = 0; i < M; i++){
+    for(size_t j = 0; j < N; j++){
       len[j] = g.exon_len[j]*g.exon_iso_idx[i][j];
     }
     get_curve_from_hist(GBC, GBC_l, len, area);
     double tot_area = sum_vector(area);
-    for(int j = 0; j < N; j++){
+    for(size_t j = 0; j < N; j++){
       g.GBC[i*N+j] = area[j];
     }
   }
 }
 
 void get_LBC_matrix(gene_info& g){
-  int M = g.iso_num;
-  int N = g.exon_num;
+  size_t M = g.iso_num;
+  size_t N = g.exon_num;
 
   vector<double> LBC_h = vector<double>(N, 0.0);
   vector<double> LBC_l = vector<double>(N, 0.0);
@@ -640,20 +644,20 @@ void get_LBC_matrix(gene_info& g){
   vector<double> area= vector<double>(N, 0.0);
   vector<double> len = vector<double>(N, 0);
 
-  for(int j = 0; j < N; j++){
-    for(int i = 0; i < M; i++){
+  for(size_t j = 0; j < N; j++){
+    for(size_t i = 0; i < M; i++){
       LBC_l[j] += g.exon_iso_idx[i][j];
     }
     LBC_l[j] *= g.exon_len[j];
   }
 
-  for(int i = 0; i < M; i++){
-    for(int j = 0; j < N; j++){
+  for(size_t i = 0; i < M; i++){
+    for(size_t j = 0; j < N; j++){
       len[j] = (double)g.exon_len[j]*g.exon_iso_idx[i][j];
     }
     get_curve_from_hist(LBC_h, LBC_l, len, area);
     double tot_area = sum_vector(area);
-    for(int j = 0; j < N; j++){
+    for(size_t j = 0; j < N; j++){
       g.LBC[i*N+j] = area[j] * GBC_BIN_NUM / tot_area;
     }
   }
@@ -668,11 +672,11 @@ void calcuAllTheGenes(map<string, gene_info> & map_g_info,
     g.is_valid = g.if_valid();
     if(g.is_valid == 1){
       out << g.gene_name << "\t" << g.iso_num << "\t" << g.tot_rd_cnt << "\t";
-      for(int i = 0; i < g.iso_num; i++){
+      for(size_t i = 0; i < g.iso_num; i++){
         out << g.iso_name[i] <<",";
       }
       out << "\t";
-      for(int j = 0; j < g.iso_num; j++){
+      for(size_t j = 0; j < g.iso_num; j++){
       out << 0 << ",";
       }
       out << "\t" << 0; // total Theta, total expression.
@@ -680,7 +684,7 @@ void calcuAllTheGenes(map<string, gene_info> & map_g_info,
     }
     else if(g.is_valid == 0){
       out << g.gene_name << "\t" << g.iso_num << "\t" << g.tot_rd_cnt << "\t";
-      for(int i = 0; i < g.iso_num; i++){
+      for(size_t i = 0; i < g.iso_num; i++){
         out << g.iso_name[i] << ",";
       }
       out << "\t";
@@ -688,7 +692,7 @@ void calcuAllTheGenes(map<string, gene_info> & map_g_info,
     //////  expression estimation
       max_likelihood(g, alpha, GBC);
       double totalTheta = 0.0;
-      for(int ii = 0; ii < g.iso_num; ii++){
+      for(size_t ii = 0; ii < g.iso_num; ii++){
         out << g.theta[ii]*g.tot_rd_cnt/tot_valid_rd_cnt*1e9 << ",";
         totalTheta += g.theta[ii];
       }

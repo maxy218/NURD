@@ -104,30 +104,7 @@ public:
   //following are some other member function
   int if_valid();  //judge whether the gene is valid. If one gene is invalid, may be it is because:
             //1: there are 0 reads mapped to the gene
-
-  //should be deleted.
-  bool getGeneData(ifstream& infile);
-
 };
-
-bool if_some_state_on(const vector<bool>& state);
-
-//the first two para are const, the last four para are the results we want
-void exon_len_split(
-    const vector<vector<_chr_coor> >& exon_iso_start,
-    const vector<vector<_chr_coor> >& exon_iso_end,
-    vector<_chr_coor>& exon_len,
-    vector<vector<int> >& exon_iso_idx,
-    list<_chr_coor>& list_split_s,
-    list<_chr_coor>& list_split_e);
-
-/*
-vector<double> get_GBC(
-  map<string, list<_chr_coor> > & gene_read_pos_map,
-  map<string, gene_info> & gene_info_map,
-  int num_bins
-  );
-*/
 
 //the following work is to change the return type from bool to int, different return value represent different error type
 bool if_gene_anno_valid(const gene_info& gene);

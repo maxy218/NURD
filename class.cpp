@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <map>
+#include <set>
 #include "common.h"
 #include "const.h"
 #include "class.h"
@@ -465,15 +466,15 @@ bool if_gene_anno_valid(const gene_info& gene){
   //  sorted list may be not efficient. Maybe hash is faster!
   //  hash: just judge whether every isoform name is new, having no duplicate
   if(gene.iso_num > 1){
-    list<string> list_iso_name;
-
-    for(int i = 0; i < gene.iso_num; i++){
-      list_iso_name.push_back(gene.iso_name[i]);
-    }
-    list_iso_name.sort();
-    list_iso_name.unique();
-    if(list_iso_name.size() != gene.iso_num){
-      return false;
+    set<string> set_iso;
+    set<string>::iterator iter_set_iso;
+    for(size_t i = 0; i < gene.iso_num; i++){
+      if((iter_set_iso = set_iso.find(gene.iso_name[i])) != set_iso.end()){
+        return false;
+      }
+      else{
+        set_iso.insert(gene.iso_name[i]);
+      }
     }
   }
 
