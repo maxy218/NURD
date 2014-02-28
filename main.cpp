@@ -20,7 +20,6 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include <map>
 #include <sstream>
 #include <stdexcept>
 #include <vector>
@@ -29,11 +28,14 @@
 #include <unistd.h> // parsing argument
 #include <sys/stat.h>   // mkdir and access
 
+#include <boost/unordered_map.hpp>
+
 #include "class.h"
 #include "common.h"
 #include "algorithm.h"
 
 using namespace std;
+using namespace boost;
 
 void usage()
 {
@@ -102,8 +104,8 @@ int create_dir(const string& dirName)
 int main(int argc, char**argv)
 {
   // parsing argument
-  map<string,string> argu_parse_result;
-  map<string,string>::iterator argu_parse_iterator;
+  unordered_map<string, string> argu_parse_result;
+  unordered_map<string, string>::iterator argu_parse_iterator;
 
   ifstream in_anno; // annotation file.
   ifstream in_rdmap; // reads mapping file.
@@ -233,7 +235,7 @@ int main(int argc, char**argv)
   out_expr_name = out_nurd_name + ".all_expr";
   std_output_with_time("expression file: " + out_expr_name + "\n");
 
-  map<string, gene_info> map_g_info;
+  unordered_map<string, gene_info> map_g_info;
   get_anno_info(in_anno, anno_choice, map_g_info);
 
   vector<double> GBC = vector<double>(GBC_BIN_NUM, 0.0);

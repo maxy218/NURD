@@ -21,9 +21,10 @@
 #include <cmath>
 #include <fstream>
 #include <iostream>
-#include <map>
 #include <sstream>
 #include <vector>
+
+#include <boost/unordered_map.hpp>
 
 #include "algorithm.h"
 #include "class.h"
@@ -31,10 +32,12 @@
 #include "const.h"
 
 using namespace std;
+using namespace boost;
 
 //deal with refflat format annotation file.
-static void get_anno_refflat(ifstream& in_anno, map<string, vector<isoform_anno> >& g_iso_anno_map){
-  map<string, gene_info>::iterator iter_map_g_anno;
+static void get_anno_refflat(ifstream& in_anno, 
+    unordered_map<string, vector<isoform_anno> >& g_iso_anno_map){
+  unordered_map<string, gene_info>::iterator iter_map_g_anno;
 
   string line;
 
@@ -94,14 +97,15 @@ static void get_anno_refflat(ifstream& in_anno, map<string, vector<isoform_anno>
 
 //only deal with the exon annotation. CDS and start/end_codon is ignored.
 // 0 -> chr; 1 -> data source; 2 -> function; 3 -> start; 4 -> end; 5 -> score; 6 -> strand; 7 -> phase; 8 -> gene id and trans id
-static void get_anno_GTF(ifstream& in_anno, map<string, vector<isoform_anno> >& g_iso_anno_map){
-  map<string, gene_info>::iterator iter_map_g_anno;
+static void get_anno_GTF(ifstream& in_anno, 
+    unordered_map<string, vector<isoform_anno> >& g_iso_anno_map){
+  unordered_map<string, gene_info>::iterator iter_map_g_anno;
 
   string line;
 
   // key: transcript name, value: transcript annotation.
-  map<string, isoform_anno> iso_anno_map;
-  map<string, isoform_anno>::iterator iter_map_iso_anno;
+  unordered_map<string, isoform_anno> iso_anno_map;
+  unordered_map<string, isoform_anno>::iterator iter_map_iso_anno;
 
   // the column number of GTF is <= 9
   const static unsigned int col_num_GTF = 9;
@@ -165,10 +169,10 @@ static void get_anno_GTF(ifstream& in_anno, map<string, vector<isoform_anno> >& 
 }
 
 void get_anno_info(ifstream & in_anno, const unsigned int anno_choice, 
-    map<string, gene_info> & map_g_anno){
-  map<string, gene_info>::iterator iter_map_g_anno;
-  map<string, vector<isoform_anno> > g_iso_anno_map;
-  map<string, vector<isoform_anno> >::iterator iter_g_iso;
+    unordered_map<string, gene_info> & map_g_anno){
+  unordered_map<string, gene_info>::iterator iter_map_g_anno;
+  unordered_map<string, vector<isoform_anno> > g_iso_anno_map;
+  unordered_map<string, vector<isoform_anno> >::iterator iter_g_iso;
 
   if(anno_choice == 1){
     get_anno_refflat(in_anno, g_iso_anno_map);
@@ -194,7 +198,7 @@ void get_anno_info(ifstream & in_anno, const unsigned int anno_choice,
 }
 
 // output the data to the nurd file, which is a temporary file.
-static void output_nurd_file(const vector<double>& GBC, const map<string, gene_info>& map_g_anno, 
+static void output_nurd_file(const vector<double>& GBC, const unordered_map<string, gene_info>& map_g_anno, 
     size_t tot_valid_rd_cnt, ofstream& out_nurd){
   // output GBC curve
   output_vector<double>(GBC, out_nurd, '\t');
@@ -204,7 +208,7 @@ static void output_nurd_file(const vector<double>& GBC, const map<string, gene_i
   out_nurd << map_g_anno.size() << endl;
 
   // output each gene's detail information
-  map<string, gene_info>::const_iterator iter_map_g_anno; // const iterator
+  unordered_map<string, gene_info>::const_iterator iter_map_g_anno; // const iterator
   for(iter_map_g_anno = map_g_anno.begin(); iter_map_g_anno != map_g_anno.end(); ++iter_map_g_anno){
     string gene_name = (*iter_map_g_anno).second.gene_name;
 
@@ -229,16 +233,16 @@ static void output_nurd_file(const vector<double>& GBC, const map<string, gene_i
 }
 
 // get the map relation of (chr -> (pos -> gene))
-static void get_map_chr_pos_gene(map<string, gene_info> & map_g_info, 
-    map<string, map<_chr_coor, string> > & map_chr_pos_gene){
-  map<string, gene_info>::iterator iter_map_g_info;
+static void get_map_chr_pos_gene(unordered_map<string, gene_info> & map_g_info, 
+    unordered_map<string, unordered_map<_chr_coor, string> > & map_chr_pos_gene){
+  unordered_map<string, gene_info>::iterator iter_map_g_info;
 
   for(iter_map_g_info = map_g_info.begin(); iter_map_g_info != map_g_info.end(); ++iter_map_g_info){
     gene_info & g = iter_map_g_info -> second;
 
     //frist map
     if(map_chr_pos_gene.find(g.chrom) == map_chr_pos_gene.end()){
-      map_chr_pos_gene[g.chrom] = map<_chr_coor, string>();
+      map_chr_pos_gene[g.chrom] = unordered_map<_chr_coor, string>();
       map_chr_pos_gene[g.chrom][g.g_start] = g.gene_name;
     }
     else{
@@ -248,10 +252,10 @@ static void get_map_chr_pos_gene(map<string, gene_info> & map_g_info,
 }
 
 // get the map relation of (chr -> all the start position on this chromosome)
-static void get_map_chr_start_pos(map<string, gene_info> & map_g_info,
-    map<string, vector<_chr_coor> > & map_chr_start_pos){
-  map<string, vector<_chr_coor> >::iterator iter_map_chr_pos;
-  map<string, gene_info>::iterator iter_map_g_info;
+static void get_map_chr_start_pos(unordered_map<string, gene_info> & map_g_info,
+    unordered_map<string, vector<_chr_coor> > & map_chr_start_pos){
+  unordered_map<string, vector<_chr_coor> >::iterator iter_map_chr_pos;
+  unordered_map<string, gene_info>::iterator iter_map_g_info;
 
   for(iter_map_g_info = map_g_info.begin(); iter_map_g_info != map_g_info.end(); ++iter_map_g_info){
     gene_info & g = iter_map_g_info -> second;
@@ -273,11 +277,11 @@ static void get_map_chr_start_pos(map<string, gene_info> & map_g_info,
 }
 
 // get the map relation of (chr -> all the end position on this chromosome)
-static void get_map_chr_end_pos(map<string, gene_info> & map_g_info, map<string, 
-    map<_chr_coor,string> > & map_chr_pos_gene,
-    map<string, vector<_chr_coor> > & map_chr_start_pos,
-    map<string, vector<_chr_coor> > & map_chr_end_pos){
-  map<string, vector<_chr_coor> >::iterator iter_map_chr_pos;
+static void get_map_chr_end_pos(unordered_map<string, gene_info> & map_g_info, 
+    unordered_map<string, unordered_map<_chr_coor,string> > & map_chr_pos_gene,
+    unordered_map<string, vector<_chr_coor> > & map_chr_start_pos,
+    unordered_map<string, vector<_chr_coor> > & map_chr_end_pos){
+  unordered_map<string, vector<_chr_coor> >::iterator iter_map_chr_pos;
   // get map_chr_end_pos
   // because the start pos is sorted, so the correspond end pos can't be sure sorted. So the corresponding vector should be got based on the start pos
   for(iter_map_chr_pos = map_chr_start_pos.begin(); iter_map_chr_pos != map_chr_start_pos.end();
@@ -286,7 +290,7 @@ static void get_map_chr_end_pos(map<string, gene_info> & map_g_info, map<string,
     map_chr_end_pos[iter_map_chr_pos -> first] = vector<_chr_coor>(chr_s_pos_size);
     vector<_chr_coor> & ref_end_pos = map_chr_end_pos[iter_map_chr_pos -> first];
     vector<_chr_coor> & ref_start_pos = map_chr_end_pos[iter_map_chr_pos -> first];
-    map<_chr_coor, string> & ref_map_pos_gene = map_chr_pos_gene[iter_map_chr_pos -> first];
+    unordered_map<_chr_coor, string> & ref_map_pos_gene = map_chr_pos_gene[iter_map_chr_pos -> first];
     for(size_t i = 0; i < chr_s_pos_size; i++){
       string & gene_name = ref_map_pos_gene[ iter_map_chr_pos -> second[i] ];
       ref_end_pos[i] = map_g_info[gene_name].g_end;
@@ -295,7 +299,7 @@ static void get_map_chr_end_pos(map<string, gene_info> & map_g_info, map<string,
 }
 
 // get the read count of each exon
-size_t get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap, 
+size_t get_exon_rd_cnt(unordered_map<string, gene_info> & map_g_info, ifstream & in_rdmap, 
     size_t & tot_valid_rd_cnt, vector<double> & GBC){
   clock_t start_time,end_time;
   time_t cur_time;
@@ -304,7 +308,7 @@ size_t get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
   clock_t tmp_start, tmp_end;
   stringstream ss (stringstream::in | stringstream::out);
 
-  map<string, gene_info>::iterator iter_map_g_info;
+  unordered_map<string, gene_info>::iterator iter_map_g_info;
 
   end_time = clock();
   ss << "gene annotation time: " << ((double)end_time-start_time)/CLOCKS_PER_SEC << " seconds.\n";
@@ -328,14 +332,14 @@ size_t get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
 
   //// first key is chr name, second key is gene start pos, second value is gene name. The first value is a map container.
   //// This is map nest definition.
-  map<string, map<_chr_coor, string> > map_chr_pos_gene;
+  unordered_map<string, unordered_map<_chr_coor, string> > map_chr_pos_gene;
 
   // the key is chr name, the value is a vector, in which are the gene start positions on this chr.
   // no gene name. Gene names can be easily got from the former hash map.
   // this vector should be sorted before binary search.
-  map<string, vector<_chr_coor> > map_chr_start_pos;
-  map<string, vector<_chr_coor> > map_chr_end_pos;
-  map<string, vector<_chr_coor> >::iterator iter_map_chr_pos_vec;
+  unordered_map<string, vector<_chr_coor> > map_chr_start_pos;
+  unordered_map<string, vector<_chr_coor> > map_chr_end_pos;
+  unordered_map<string, vector<_chr_coor> >::iterator iter_map_chr_pos_vec;
 
   get_map_chr_pos_gene(map_g_info, map_chr_pos_gene);
   get_map_chr_start_pos(map_g_info, map_chr_start_pos);
@@ -716,9 +720,9 @@ static void get_LBC_matrix(gene_info& g){
   }
 }
 
-void calcuAllTheGenes(map<string, gene_info> & map_g_info, 
+void calcuAllTheGenes(unordered_map<string, gene_info> & map_g_info, 
     size_t tot_valid_rd_cnt, double alpha, const vector<double> & GBC, ofstream& out){
-  map<string, gene_info>::iterator iter_map_g_info = map_g_info.begin();
+  unordered_map<string, gene_info>::iterator iter_map_g_info = map_g_info.begin();
   for(; iter_map_g_info != map_g_info.end(); ++iter_map_g_info){
     gene_info & g = iter_map_g_info -> second;
 

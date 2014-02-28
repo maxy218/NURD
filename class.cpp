@@ -20,15 +20,16 @@
 #include <algorithm>
 #include <cstdlib>
 #include <list>
-#include <map>
-#include <set>
 #include <string>
 #include <vector>
+
+#include <boost/unordered_set.hpp>
 
 #include "common.h"
 #include "const.h"
 #include "class.h"
 using namespace std;
+using namespace boost;
 
 //gene_info: constructor functions
 gene_info::gene_info(){} // do nothing. Don't caculate based on the object initialized by default constructor.
@@ -467,8 +468,8 @@ bool if_gene_anno_valid(const gene_info& gene){
   //  sorted list may be not efficient. Maybe hash is faster!
   //  hash: just judge whether every isoform name is new, having no duplicate
   if(gene.iso_num > 1){
-    set<string> set_iso;
-    set<string>::iterator iter_set_iso;
+    unordered_set<string> set_iso;
+    unordered_set<string>::iterator iter_set_iso;
     for(size_t i = 0; i < gene.iso_num; i++){
       if((iter_set_iso = set_iso.find(gene.iso_name[i])) != set_iso.end()){
         return false;

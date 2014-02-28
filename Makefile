@@ -1,9 +1,10 @@
 SRCS = main.cpp algorithm.cpp class.cpp common.cpp const.cpp 
 OBJS = $(SRCS:.c=.cpp)
+LIBS = ./boost
 EXECUTABLE = NURD
 
 all:
-	g++ -O3 -o $(EXECUTABLE) $(SRCS)
+	g++ -O3 -o $(EXECUTABLE) -I $(LIBS) $(SRCS) 
 
 .PHONY: clean
 
