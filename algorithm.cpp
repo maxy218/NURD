@@ -33,12 +33,16 @@
 using namespace std;
 
 //deal with refflat format annotation file.
-void get_anno_refflat(ifstream& in_anno, map<string, vector<isoform_anno> >& g_iso_anno_map){
+static void get_anno_refflat(ifstream& in_anno, map<string, vector<isoform_anno> >& g_iso_anno_map){
   map<string, gene_info>::iterator iter_map_g_anno;
 
   string line;
+
+  // the column number of refflat is <= 11
+  const static unsigned int col_num_refflat = 11;
+  vector<string> str_vec = vector<string>(col_num_refflat);
   while(getline(in_anno, line)){
-    vector<string> str_vec = delimiter(line,'\t');
+    delimiter_ret_ref(line, '\t', col_num_refflat, str_vec);
     string gene_name = str_vec[0];
 
     g_iso_anno_map[gene_name].push_back(isoform_anno());
@@ -90,51 +94,62 @@ void get_anno_refflat(ifstream& in_anno, map<string, vector<isoform_anno> >& g_i
 
 //only deal with the exon annotation. CDS and start/end_codon is ignored.
 // 0 -> chr; 1 -> data source; 2 -> function; 3 -> start; 4 -> end; 5 -> score; 6 -> strand; 7 -> phase; 8 -> gene id and trans id
-void get_anno_GTF(ifstream& in_anno, map<string, vector<isoform_anno> >& g_iso_anno_map){
+static void get_anno_GTF(ifstream& in_anno, map<string, vector<isoform_anno> >& g_iso_anno_map){
   map<string, gene_info>::iterator iter_map_g_anno;
 
   string line;
-  map<string, isoform_anno> iso_anno_map; // key: transcript name, value: transcript annotation.
-  map<string, isoform_anno>::iterator iter_map_iso_anno; // key: transcript name, value: transcript annotation.
+
+  // key: transcript name, value: transcript annotation.
+  map<string, isoform_anno> iso_anno_map;
+  map<string, isoform_anno>::iterator iter_map_iso_anno;
+
+  // the column number of GTF is <= 9
+  const static unsigned int col_num_GTF = 9;
+  vector<string> str_vec = vector<string>(col_num_GTF);
+
+  // the column number of str_vec[8] is <= 4
+  const static unsigned int col_num_gene_trans_id = 4;
+  vector<string> gene_trans_id_vec = vector<string>(col_num_gene_trans_id);
+
   while(getline(in_anno, line)){
-    vector<string> str_vec = delimiter(line, '\t');
-    vector<string> gene_trans_id_vec = delimiter(str_vec[8], '\"');
+    delimiter_ret_ref(line, '\t', col_num_GTF, str_vec);
+
+//    vector<string> gene_trans_id_vec = delimiter(str_vec[8], '\"');
+    delimiter_ret_ref(str_vec[8], '\"', col_num_gene_trans_id, gene_trans_id_vec);
 
     _chr_coor start_pos, end_pos;
 
-    if(str_vec[2] == "exon") // only deal with exon.
-    {
-      start_pos = atoi(str_vec[3].c_str()) - 1; // "-1" is because the GTF starts from 1, not 0 (which is refFlat style.)
-      end_pos = atoi(str_vec[4].c_str()); // the end position is the same with refflat.
+    // only deal with exon.
+    if(str_vec[2] != "exon"){ 
+      continue;
+    }
+    start_pos = atoi(str_vec[3].c_str()) - 1; // "-1" is because the GTF starts from 1, not 0 (which is refFlat style.)
+    end_pos = atoi(str_vec[4].c_str()); // the end position is the same with refflat.
 
-      // trans name and chr name are needed to identify a transcript.
-      // some trans may come from different chromosome.
-      string iso_chr_combined = gene_trans_id_vec[3] + "\t" + str_vec[0]; 
+    // trans name and chr name are needed to identify a transcript.
+    // some trans may come from different chromosome.
+    string iso_chr_combined = gene_trans_id_vec[3] + "\t" + str_vec[0]; 
 
-      // if has been dealt before.
-      if( (iter_map_iso_anno = iso_anno_map.find(iso_chr_combined)) != iso_anno_map.end()) 
-      {
-        iter_map_iso_anno -> second.exon_starts.push_back(start_pos);
-        iter_map_iso_anno -> second.exon_ends.push_back(end_pos);
-      }
-      else // this trans has not been dealt.
-      {
-        iso_anno_map[ iso_chr_combined ] = isoform_anno();
+    // if has been dealt before.
+    if( (iter_map_iso_anno = iso_anno_map.find(iso_chr_combined)) != iso_anno_map.end()){
+      iter_map_iso_anno -> second.exon_starts.push_back(start_pos);
+      iter_map_iso_anno -> second.exon_ends.push_back(end_pos);
+    }
+    else{ // this trans has not been dealt.
+      iso_anno_map[ iso_chr_combined ] = isoform_anno();
 
-        isoform_anno & iso_anno = iso_anno_map[ iso_chr_combined ];
-        iso_anno.gene_name = gene_trans_id_vec[1];
-        iso_anno.name = gene_trans_id_vec[3];
-        iso_anno.chrom = str_vec[0];
-        iso_anno.strand = str_vec[6];
+      isoform_anno & iso_anno = iso_anno_map[ iso_chr_combined ];
+      iso_anno.gene_name = gene_trans_id_vec[1];
+      iso_anno.name = gene_trans_id_vec[3];
+      iso_anno.chrom = str_vec[0];
+      iso_anno.strand = str_vec[6];
 
-        iso_anno.exon_starts.push_back(start_pos);
-        iso_anno.exon_ends.push_back(end_pos);
-      }
+      iso_anno.exon_starts.push_back(start_pos);
+      iso_anno.exon_ends.push_back(end_pos);
     }
   }
 
-  for(iter_map_iso_anno = iso_anno_map.begin(); iter_map_iso_anno != iso_anno_map.end(); iter_map_iso_anno++)
-  {
+  for(iter_map_iso_anno = iso_anno_map.begin(); iter_map_iso_anno != iso_anno_map.end(); iter_map_iso_anno++){
     isoform_anno & iso_anno = iter_map_iso_anno->second;
     sort(iso_anno.exon_starts.begin(), iso_anno.exon_starts.end());
     sort(iso_anno.exon_ends.begin(), iso_anno.exon_ends.end());
@@ -179,7 +194,7 @@ void get_anno_info(ifstream & in_anno, const unsigned int anno_choice,
 }
 
 // output the data to the nurd file, which is a temporary file.
-void output_nurd_file(const vector<double>& GBC, const map<string, gene_info>& map_g_anno, 
+static void output_nurd_file(const vector<double>& GBC, const map<string, gene_info>& map_g_anno, 
     size_t tot_valid_rd_cnt, ofstream& out_nurd){
   // output GBC curve
   output_vector<double>(GBC, out_nurd, '\t');
@@ -214,7 +229,7 @@ void output_nurd_file(const vector<double>& GBC, const map<string, gene_info>& m
 }
 
 // get the map relation of (chr -> (pos -> gene))
-void get_map_chr_pos_gene(map<string, gene_info> & map_g_info, 
+static void get_map_chr_pos_gene(map<string, gene_info> & map_g_info, 
     map<string, map<_chr_coor, string> > & map_chr_pos_gene){
   map<string, gene_info>::iterator iter_map_g_info;
 
@@ -233,7 +248,7 @@ void get_map_chr_pos_gene(map<string, gene_info> & map_g_info,
 }
 
 // get the map relation of (chr -> all the start position on this chromosome)
-void get_map_chr_start_pos(map<string, gene_info> & map_g_info,
+static void get_map_chr_start_pos(map<string, gene_info> & map_g_info,
     map<string, vector<_chr_coor> > & map_chr_start_pos){
   map<string, vector<_chr_coor> >::iterator iter_map_chr_pos;
   map<string, gene_info>::iterator iter_map_g_info;
@@ -258,7 +273,7 @@ void get_map_chr_start_pos(map<string, gene_info> & map_g_info,
 }
 
 // get the map relation of (chr -> all the end position on this chromosome)
-void get_map_chr_end_pos(map<string, gene_info> & map_g_info, map<string, 
+static void get_map_chr_end_pos(map<string, gene_info> & map_g_info, map<string, 
     map<_chr_coor,string> > & map_chr_pos_gene,
     map<string, vector<_chr_coor> > & map_chr_start_pos,
     map<string, vector<_chr_coor> > & map_chr_end_pos){
@@ -451,10 +466,10 @@ size_t get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
   //////////////////////////////////
 
   end_time = clock();
-    ss << "read count time: " << ((double)end_time-start_time)/CLOCKS_PER_SEC << " seconds.\n";
-    std_output_with_time(ss.str());
-    ss.str("");
-    start_time = end_time;
+  ss << "read count time: " << ((double)end_time-start_time)/CLOCKS_PER_SEC << " seconds.\n";
+  std_output_with_time(ss.str());
+  ss.str("");
+  start_time = end_time;
 
   // update the is_valid information of each gene.
   for(iter_map_g_info = map_g_info.begin(); iter_map_g_info != map_g_info.end(); ++iter_map_g_info){
@@ -467,7 +482,7 @@ size_t get_exon_rd_cnt(map<string, gene_info> & map_g_info, ifstream & in_rdmap,
   return 0;
 }
 
-double get_log_likelihood(const gene_info& g){
+static double get_log_likelihood(const gene_info& g){
   size_t N = g.exon_num;
   size_t M = g.iso_num;
 
@@ -486,35 +501,33 @@ double get_log_likelihood(const gene_info& g){
   return likeli;
 }
 
-double get_gradient_of_log_likelihood(const gene_info& g, size_t i){
+static double get_gradient_of_log_likelihood(const gene_info& g, size_t i){
   size_t N = g.exon_num;
   size_t M = g.iso_num;
 
   double gradient = 0.0;
   for(size_t j = 0; j < N; j++){
     gradient -= g.tot_rd_cnt*g.exon_len[j]*g.c[i*N+j];
-    if(g.rd_cnt[j]*g.c[i*N+j] != 0)
-    {
-      double tmp_sum = EPSILON;
-      for(size_t k = 0; k < M; k++)
-      {
-        tmp_sum += g.c[k*N+j]*g.theta[k];
-      }
-      gradient += g.rd_cnt[j]*g.c[i*N+j]/tmp_sum;
+    if(fabs( g.rd_cnt[j]*g.c[i*N+j] != 0) < EPSILON){
+      continue;
     }
+    double tmp_sum = EPSILON;
+    for(size_t k = 0; k < M; k++){
+      tmp_sum += g.c[k*N+j]*g.theta[k];
+    }
+    gradient += g.rd_cnt[j]*g.c[i*N+j]/tmp_sum;
   }
   return gradient;
 }
 
-void max_isoform_bisearch(gene_info& g, size_t k){
+static void max_isoform_bisearch(gene_info& g, size_t k){
   const double LOCAL_EPSILON = 1e-8;
   const double LOCAL_EPSILON_GRADIENT = 1e-8;
   double left, right;
 
   double effective_iso_len = 0.0;
   size_t N = g.exon_num;
-  for(size_t j = 0; j < N; j++)
-  {
+  for(size_t j = 0; j < N; j++){
     effective_iso_len += g.c[k*N+j]*g.exon_len[j];
   }
   left = 0;
@@ -523,15 +536,13 @@ void max_isoform_bisearch(gene_info& g, size_t k){
   ///////// quick check of the boundary. If gradient near zero < 0 => 0; if gradient near right boundary > 0 => right boundary.
   //check left boundary
   g.theta[k] = left + LOCAL_EPSILON;
-  if( get_gradient_of_log_likelihood(g, k) < 0)
-  {
+  if( get_gradient_of_log_likelihood(g, k) < 0){
     g.theta[k] = left;
     return;
   }
   //check right boundary
   g.theta[k] = right - LOCAL_EPSILON;
-  if( get_gradient_of_log_likelihood(g, k) > 0)
-  {
+  if( get_gradient_of_log_likelihood(g, k) > 0){
     g.theta[k] = right;
     return;
   }
@@ -540,27 +551,23 @@ void max_isoform_bisearch(gene_info& g, size_t k){
   double tmp = (right+left)/2;
   double gradient = 1.0;
   // while(right - left > LOCAL_EPSILON && (gradient > LOCAL_EPSILON_GRADIENT || gradient < -LOCAL_EPSILON_GRADIENT ))
-  while(right - left > LOCAL_EPSILON)
-  {
+  while(right - left > LOCAL_EPSILON){
     g.theta[k] = tmp;
     gradient = get_gradient_of_log_likelihood(g, k);
-    if( gradient < 0 )
-    {
+    if( gradient < 0 ){
       right = tmp;
     }
-    else if(gradient > 0)
-    {
+    else if(gradient > 0){
       left = tmp;
     }
-    else
-    {
+    else{
       break;
     }
     tmp = (left+right)/2;
   }
 }
 
-double max_likelihood_given_C(gene_info& g){
+static double max_likelihood_given_C(gene_info& g){
   size_t M = g.iso_num;
 
   double f_value = get_log_likelihood(g);
@@ -587,10 +594,10 @@ double max_likelihood_given_C(gene_info& g){
   return f_value;
 }
 
-void get_GBC_matrix(gene_info& g, const vector<double> & GBC);
-void get_LBC_matrix(gene_info& g);
+static void get_GBC_matrix(gene_info& g, const vector<double> & GBC);
+static void get_LBC_matrix(gene_info& g);
 
-double max_likelihood(gene_info& g, double alpha, const vector<double> & GBC){
+static double max_likelihood(gene_info& g, double alpha, const vector<double> & GBC){
   size_t M = g.iso_num;
   size_t N = g.exon_num;
 
@@ -606,7 +613,7 @@ double max_likelihood(gene_info& g, double alpha, const vector<double> & GBC){
   return max_likelihood_given_C(g);
 }
 
-void get_LBC_curve(gene_info& g, vector<double>& LBC){
+static void get_LBC_curve(gene_info& g, vector<double>& LBC){
   size_t M = g.iso_num;
   size_t N = g.exon_num;
 
@@ -629,7 +636,7 @@ void get_LBC_curve(gene_info& g, vector<double>& LBC){
   }
 }
 
-void get_curve_from_hist(const vector<double> & hist_h, const vector<double> & hist_l,
+static void get_curve_from_hist(const vector<double> & hist_h, const vector<double> & hist_l,
     const vector<double> & len, vector<double>& area){
 
   size_t hist_size = hist_h.size();
@@ -660,18 +667,18 @@ void get_curve_from_hist(const vector<double> & hist_h, const vector<double> & h
   }
 }
 
-void get_GBC_matrix(gene_info& g, const vector<double> & GBC){
+static vector<double> global_GBC_len = vector<double>(GBC_BIN_NUM, 1);
+static void get_GBC_matrix(gene_info& g, const vector<double> & GBC){
   size_t M = g.iso_num;
   size_t N = g.exon_num;
   vector<double> area = vector<double>(N, 0);
   vector<double> len = vector<double>(N, 0);
-  vector<double> GBC_l = vector<double>(GBC_BIN_NUM, 1);
  
   for(size_t i = 0; i < M; i++){
     for(size_t j = 0; j < N; j++){
       len[j] = g.exon_len[j]*g.exon_iso_idx[i][j];
     }
-    get_curve_from_hist(GBC, GBC_l, len, area);
+    get_curve_from_hist(GBC, global_GBC_len, len, area);
     double tot_area = sum_vector(area);
     for(size_t j = 0; j < N; j++){
       g.GBC[i*N+j] = area[j];
@@ -679,7 +686,7 @@ void get_GBC_matrix(gene_info& g, const vector<double> & GBC){
   }
 }
 
-void get_LBC_matrix(gene_info& g){
+static void get_LBC_matrix(gene_info& g){
   size_t M = g.iso_num;
   size_t N = g.exon_num;
 
