@@ -1,6 +1,6 @@
 SRCS = main.cpp algorithm.cpp class.cpp common.cpp const.cpp 
 OBJS = $(SRCS:.c=.cpp)
-LIBS = ./boost
+LIBS = ./boost/boost_1_55
 EXECUTABLE = NURD
 
 all:
