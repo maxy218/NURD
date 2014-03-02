@@ -40,7 +40,7 @@ using namespace boost;
 void usage(ostream & out)
 {
   out << "NURD is a tool to estimate isoform expression with RNA-Seq data." << endl;
-  out << "Version: 1.0.8" << endl;
+  out << "Version: 1.1.0" << endl;
   out << "========================================" << endl;
   out << "Usage:\t" << "NURD [options] <-G annotation.gtf>|<-R annotation.refflat> <-S mapping_file.sam>" << endl;
   out << "\t" << "-G: annotation.gtf: gene annotation in gtf format." << endl;

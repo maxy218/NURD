@@ -63,22 +63,6 @@ static void get_anno_refflat(ifstream& in_anno,
     iso_anno.exon_starts = vector<_chr_coor>(iso_anno.exon_cnt);
     iso_anno.exon_ends = vector<_chr_coor>(iso_anno.exon_cnt);
 
-/*
-    // this method will be 0.1 second faster than the following method.
-    vector<string> pos;
-    pos = delimiter(str_vec[9], ',', iso_anno.exon_cnt);
-    int i = 0;
-    for(iter=pos.begin(); iter != pos.end(); iter++){
-      iso_anno.exon_starts[i++] = atoi((*iter).c_str());
-    }
-
-    pos = delimiter(str_vec[10], ',', iso_anno.exon_cnt);
-    i = 0;
-    for(iter=pos.begin(); iter != pos.end(); iter++){
-      iso_anno.exon_ends[i++] = atoi((*iter).c_str());
-    }
-*/
-
     size_t idx = 0, exon_cnt = iso_anno.exon_cnt;
     vector<string> pos = vector<string>(exon_cnt);
 
