@@ -37,20 +37,20 @@
 using namespace std;
 using namespace boost;
 
-void usage()
+void usage(ostream & out)
 {
-  cout << "NURD is a tool to estimate isoform expression with RNA-Seq data." << endl;
-  cout << "Version: 1.0.8" << endl;
-  cout << "========================================" << endl;
-  cout << "Usage:\t" << "NURD [options] <-G annotation.gtf>|<-R annotation.refflat> <-S mapping_file.sam>" << endl;
-  cout << "\t" << "-G: annotation.gtf: gene annotation in gtf format." << endl;
-  cout << "\t" << "-R: annotation.refflat: gene annotation in refflat format." << endl;
-  cout << "\t" << "-S: mapping_result.sam: reads mapping result in sam format." << endl;
-  cout << "========================================" << endl;
-  cout << "\t" << "Optional:" << endl;
-  cout << "\t" << "-A: the weight of GBC when mixturing the GBC and LBC into one gene structure matrix. It's a float number between 0-1. Default: 0.5" << endl;
-  cout << "\t" << "-O: output_dir: the directory to output the estimation result. Default: current directory" << endl;
-  cout << "========================================" << endl;
+  out << "NURD is a tool to estimate isoform expression with RNA-Seq data." << endl;
+  out << "Version: 1.0.8" << endl;
+  out << "========================================" << endl;
+  out << "Usage:\t" << "NURD [options] <-G annotation.gtf>|<-R annotation.refflat> <-S mapping_file.sam>" << endl;
+  out << "\t" << "-G: annotation.gtf: gene annotation in gtf format." << endl;
+  out << "\t" << "-R: annotation.refflat: gene annotation in refflat format." << endl;
+  out << "\t" << "-S: mapping_result.sam: reads mapping result in sam format." << endl;
+  out << "========================================" << endl;
+  out << "\t" << "Optional:" << endl;
+  out << "\t" << "-A: the weight of GBC when mixturing the GBC and LBC into one gene structure matrix. It's a float number between 0-1. Default: 0.5" << endl;
+  out << "\t" << "-O: output_dir: the directory to output the estimation result. Default: current directory" << endl;
+  out << "========================================" << endl;
 }
 
 // get the name of sam file.
@@ -60,7 +60,6 @@ string get_file_name(const string& dir, int& flag){
   if(dir.size() > 0){
     if( dir[dir.size() - 1] == '\\' || dir[dir.size() - 1] == '/' ){
       flag = 1;
-      cerr << "fatal error!" << endl; // should throw some exception.
       return "";
     }
     size_t length = 0;
@@ -103,6 +102,9 @@ int create_dir(const string& dirName)
 
 int main(int argc, char**argv)
 {
+  // output to stringstream ss
+  stringstream ss (stringstream::in | stringstream::out);
+
   // parsing argument
   unordered_map<string, string> argu_parse_result;
   unordered_map<string, string>::iterator argu_parse_iterator;
@@ -210,57 +212,78 @@ int main(int argc, char**argv)
   }
   catch(runtime_error err)
   {
-    cerr << "Exception catched:" << "\t";
-    cerr << err.what() << endl << endl;
-    usage();
+    ss << "Exception catched:" << "\t";
+    ss << err.what() << endl << endl;
+    output_with_time(cerr, ss.str());
+    ss.str("");
+
+    usage(cerr);
     return 1;
   }
 
-  stringstream ss (stringstream::in | stringstream::out);
-  std_output_with_time(string("expression estimation start!\n"));
-
-  clock_t start_time, end_time;
-  start_time=clock();
+  output_with_time(cout, string("expression estimation start!\n"));
 
   //get the file names.
   int flag = 0;
   string in_rdmap_name_no_dir = get_file_name(in_rdmap_name, flag);
   if(flag != 0){
-    cerr << "Invalid sam file name!" << endl;
+    ss << "Invalid sam file name!" << endl;
+    output_with_time(cerr, ss.str());
+    ss.str("");
     return 1;
   }
 
   out_nurd_name = argu_parse_result["O"] + in_rdmap_name_no_dir + ".nurd";
-  std_output_with_time("sam file: " + out_nurd_name + "\n");
+  output_with_time(cout, "sam file: " + out_nurd_name + "\n");
   out_expr_name = out_nurd_name + ".all_expr";
-  std_output_with_time("expression file: " + out_expr_name + "\n");
+  output_with_time(cout, "expression file: " + out_expr_name + "\n");
+  
+  clock_t global_start, global_end;
+  clock_t local_start, local_end;
+  global_start = local_start = clock();
 
   unordered_map<string, gene_info> map_g_info;
   get_anno_info(in_anno, anno_choice, map_g_info);
+  local_end = clock();
+  ss << "annotation parsing time: ";
+  ss << ((double)local_end - local_start)/CLOCKS_PER_SEC << " seconds." << endl;
+  output_with_time(cout, ss.str());
+  ss.str("");
+  local_start = local_end;
 
   vector<double> GBC = vector<double>(GBC_BIN_NUM, 0.0);
   size_t tot_valid_rd_cnt = 0;
   get_exon_rd_cnt(map_g_info, in_rdmap, tot_valid_rd_cnt, GBC);
-
+  local_end = clock();
+  ss << "read counting time: ";
+  ss << ((double)local_end - local_start)/CLOCKS_PER_SEC << " seconds." << endl;
+  output_with_time(cout, ss.str());
+  ss.str("");
+  local_start = local_end;
 
   out_expr.open(out_expr_name.c_str());
+  if(! out_expr.is_open()){
+    ss << "Cannot open file: " << out_expr_name << endl;
+    output_with_time(cerr, ss.str());
+    ss.str("");
+    return 1;
+  }
 
-  time_t esti_start, esti_end;
-  esti_start = clock();
-  calcuAllTheGenes(map_g_info, tot_valid_rd_cnt, alpha, GBC, out_expr);
-  esti_end = clock();
-
-  ss<<"expression estimation time: "<<((double)esti_end-esti_start)/CLOCKS_PER_SEC<<" seconds.\n";
-  std_output_with_time(ss.str());
+  express_estimate(map_g_info, tot_valid_rd_cnt, alpha, GBC, out_expr);
+  local_end = clock();
+  ss << "expression estimating time: ";
+  ss << ((double)local_end - local_start)/CLOCKS_PER_SEC << " seconds." << endl;
+  output_with_time(cout, ss.str());
   ss.str("");
+  local_start = local_end;
 
   ss<<"expression done!"<<endl;
-  std_output_with_time(ss.str());
+  output_with_time(cout, ss.str());
   ss.str("");
 
-  end_time = clock();
-  ss << "total time: " << ((double)end_time-start_time)/CLOCKS_PER_SEC << " seconds." <<endl;
-  std_output_with_time(ss.str());
+  global_end = clock();
+  ss << "total time: " << ((double)global_end - global_start)/CLOCKS_PER_SEC << " seconds." <<endl;
+  output_with_time(cout, ss.str());
   ss.str("");
 
   return 0;

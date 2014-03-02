@@ -40,7 +40,7 @@ void get_anno_info(ifstream& in_anno, const unsigned int anno_choice,
 size_t get_exon_rd_cnt(unordered_map<string, gene_info> & map_g_info, ifstream & in_rdmap,
     size_t & tot_valid_rd_cnt, vector<double> & GBC);
 
-void calcuAllTheGenes(unordered_map<string, gene_info> & map_g_info,
+void express_estimate(unordered_map<string, gene_info> & map_g_info,
     size_t tot_valid_rd_cnt, double alpha, const vector<double> & GBC, ofstream& out);
 
 #endif // ALGORITHM_H_INCLUDED

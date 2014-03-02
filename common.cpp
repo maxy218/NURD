@@ -17,7 +17,6 @@
  */
 
 
-#include <cstdio>
 #include <ctime>
 #include <fstream>
 #include <string>
@@ -30,11 +29,12 @@
 
 using namespace std;
 
-bool std_output_with_time(const string & s)
+bool output_with_time(ostream& out, const string & s)
 {
   time_t cur_time;
   time(&cur_time);
-  printf("[%15.15s]:  %s", ctime(&cur_time)+4, s.c_str());
+  string str_time(ctime(&cur_time));
+  out << "[" << str_time.substr(4, 15) << "]:  " << s;
 }
 
 //delimeter

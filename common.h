@@ -30,7 +30,7 @@
 
 using namespace std;
 
-bool std_output_with_time(const string & s);
+bool output_with_time(ostream& out, const string & s);
 
 vector<string> delimiter(const string & str, char deli);
 

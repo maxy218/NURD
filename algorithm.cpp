@@ -21,7 +21,6 @@
 #include <cmath>
 #include <fstream>
 #include <iostream>
-#include <sstream>
 #include <vector>
 
 #include <boost/unordered_map.hpp>
@@ -301,34 +300,13 @@ static void get_map_chr_end_pos(unordered_map<string, gene_info> & map_g_info,
 // get the read count of each exon
 size_t get_exon_rd_cnt(unordered_map<string, gene_info> & map_g_info, ifstream & in_rdmap, 
     size_t & tot_valid_rd_cnt, vector<double> & GBC){
-  clock_t start_time,end_time;
-  time_t cur_time;
-  start_time = clock();
-
-  clock_t tmp_start, tmp_end;
-  stringstream ss (stringstream::in | stringstream::out);
-
   unordered_map<string, gene_info>::iterator iter_map_g_info;
 
-  end_time = clock();
-  ss << "gene annotation time: " << ((double)end_time-start_time)/CLOCKS_PER_SEC << " seconds.\n";
-  std_output_with_time(ss.str());
-  ss.str("");
-  start_time = end_time;
-
-  ss << "gene annotation done!" << endl;
-  std_output_with_time(ss.str());
-  ss.str("");
-
   //gene read count begins
-  ////////////////////////////////////////
-  /////// read count starts!
   tot_valid_rd_cnt = 0;
 
   // bin number in GBC. GBC is calculated at the same time of reads counting.
   vector<int> int_GBC = vector<int>(GBC_BIN_NUM, 0);
-
-  size_t outlier_read_cnt = 0;
 
   //// first key is chr name, second key is gene start pos, second value is gene name. The first value is a map container.
   //// This is map nest definition.
@@ -345,12 +323,12 @@ size_t get_exon_rd_cnt(unordered_map<string, gene_info> & map_g_info, ifstream &
   get_map_chr_start_pos(map_g_info, map_chr_start_pos);
   get_map_chr_end_pos(map_g_info, map_chr_pos_gene, map_chr_start_pos, map_chr_end_pos);
 
-  string temp_line;
+  string line;
 
   //deal with header
   in_rdmap.seekg(0, ios::beg);
-  while(getline(in_rdmap, temp_line)){
-    if(temp_line[0] != '@'){
+  while(getline(in_rdmap, line)){
+    if(line[0] != '@'){
       break;
     }
   }
@@ -366,7 +344,7 @@ size_t get_exon_rd_cnt(unordered_map<string, gene_info> & map_g_info, ifstream &
     
     // because only the first 10 fields are used. reduce the time that was
     // return by reference, to speed up.
-    delimiter_ret_ref(temp_line, '\t', 10, sam_column); 
+    delimiter_ret_ref(line, '\t', 10, sam_column); 
     string & chrName = sam_column[2];
     unsigned int read_Flag = atoi(sam_column[1].c_str());
 
@@ -450,11 +428,11 @@ size_t get_exon_rd_cnt(unordered_map<string, gene_info> & map_g_info, ifstream &
           int_GBC[ GBC_BIN_NUM-1 ]++;
         }
         else{
-          outlier_read_cnt++;
+          continue;
         }
       }
     }
-  }while(getline(in_rdmap,temp_line));
+  }while(getline(in_rdmap,line));
   //////////  read count ends!
   //////////////////////////////////////////
 
@@ -468,12 +446,6 @@ size_t get_exon_rd_cnt(unordered_map<string, gene_info> & map_g_info, ifstream &
     GBC[i] = ((double)int_GBC[i]*GBC_BIN_NUM)/total_GBC;
   }
   //////////////////////////////////
-
-  end_time = clock();
-  ss << "read count time: " << ((double)end_time-start_time)/CLOCKS_PER_SEC << " seconds.\n";
-  std_output_with_time(ss.str());
-  ss.str("");
-  start_time = end_time;
 
   // update the is_valid information of each gene.
   for(iter_map_g_info = map_g_info.begin(); iter_map_g_info != map_g_info.end(); ++iter_map_g_info){
@@ -720,7 +692,7 @@ static void get_LBC_matrix(gene_info& g){
   }
 }
 
-void calcuAllTheGenes(unordered_map<string, gene_info> & map_g_info, 
+void express_estimate(unordered_map<string, gene_info> & map_g_info, 
     size_t tot_valid_rd_cnt, double alpha, const vector<double> & GBC, ofstream& out){
   unordered_map<string, gene_info>::iterator iter_map_g_info = map_g_info.begin();
   for(; iter_map_g_info != map_g_info.end(); ++iter_map_g_info){
