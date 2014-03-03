@@ -704,12 +704,12 @@ void express_estimate(unordered_map<string, gene_info> & map_g_info,
 
     //////  expression estimation
       max_likelihood(g, alpha, GBC);
-      double totalTheta = 0.0;
+      double tot_theta = 0.0;
       for(size_t ii = 0; ii < g.iso_num; ii++){
         out << g.theta[ii]*g.tot_rd_cnt/tot_valid_rd_cnt*1e9 << ",";
-        totalTheta += g.theta[ii];
+        tot_theta += g.theta[ii];
       }
-      out << "\t" << totalTheta*g.tot_rd_cnt/tot_valid_rd_cnt*1e9;
+      out << "\t" << tot_theta*g.tot_rd_cnt/tot_valid_rd_cnt*1e9;
       out << "\n";
     }
   }
