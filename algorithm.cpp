@@ -78,6 +78,23 @@ static void get_anno_refflat(ifstream& in_anno,
   }
 }
 
+// get gene or transcript id from the last field of gtf.
+string get_id_gtf(const string& field, const string& id_type){
+  size_t idx = field.find(id_type);
+  size_t left = idx + id_type.size();
+  size_t len = field.size();
+  while(left < len && field[left] != '\"'){
+    ++left;
+  }
+
+  size_t right = left + 1;
+  while(right < len && field[right] != '\"'){
+    ++right;
+  }
+
+  return field.substr(left + 1, right - left - 1);
+}
+
 //only deal with the exon annotation. CDS and start/end_codon is ignored.
 // 0 -> chr; 1 -> data source; 2 -> function; 3 -> start; 4 -> end; 5 -> score; 6 -> strand; 7 -> phase; 8 -> gene id and trans id
 static void get_anno_GTF(ifstream& in_anno, 
@@ -94,15 +111,11 @@ static void get_anno_GTF(ifstream& in_anno,
   const static unsigned int col_num_GTF = 9;
   vector<string> str_vec = vector<string>(col_num_GTF);
 
-  // the column number of str_vec[8] is <= 4
-  const static unsigned int col_num_gene_trans_id = 4;
-  vector<string> gene_trans_id_vec = vector<string>(col_num_gene_trans_id);
-
   while(getline(in_anno, line)){
     delimiter_ret_ref(line, '\t', col_num_GTF, str_vec);
 
-//    vector<string> gene_trans_id_vec = delimiter(str_vec[8], '\"');
-    delimiter_ret_ref(str_vec[8], '\"', col_num_gene_trans_id, gene_trans_id_vec);
+    string gene_id = get_id_gtf(str_vec[8], "gene_id");
+    string trans_id = get_id_gtf(str_vec[8], "transcript_id");
 
     _chr_coor start_pos, end_pos;
 
@@ -115,7 +128,7 @@ static void get_anno_GTF(ifstream& in_anno,
 
     // trans name and chr name are needed to identify a transcript.
     // some trans may come from different chromosome.
-    string iso_chr_combined = gene_trans_id_vec[3] + "\t" + str_vec[0]; 
+    string iso_chr_combined = trans_id + "\t" + str_vec[0]; 
 
     // if has been dealt before.
     if( (iter_map_iso_anno = iso_anno_map.find(iso_chr_combined)) != iso_anno_map.end()){
@@ -126,8 +139,8 @@ static void get_anno_GTF(ifstream& in_anno,
       iso_anno_map[ iso_chr_combined ] = isoform_anno();
 
       isoform_anno & iso_anno = iso_anno_map[ iso_chr_combined ];
-      iso_anno.gene_name = gene_trans_id_vec[1];
-      iso_anno.name = gene_trans_id_vec[3];
+      iso_anno.gene_name = gene_id;
+      iso_anno.name = trans_id;
       iso_anno.chrom = str_vec[0];
       iso_anno.strand = str_vec[6];
 
