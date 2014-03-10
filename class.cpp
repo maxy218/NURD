@@ -101,44 +101,6 @@ isoform_anno::isoform_anno():
   exon_ends ( vector<_chr_coor>(0) )
 {}
 
-/*
-isoform_anno::isoform_anno(int anno_type, string line){
-  if(anno_type == 1)// refflat annotation format
-  {
-    vector<string> str_vec = delimiter(line,'\t');
-
-    gene_name = str_vec[0];
-    name = str_vec[1];
-    chrom = str_vec[2];
-    strand = str_vec[3];
-    tx_start = atoi((str_vec[4]).c_str());
-    tx_end = atoi((str_vec[5]).c_str());
-    cds_start = atoi((str_vec[6]).c_str());
-    cds_end = atoi((str_vec[7]).c_str());
-    exon_cnt = atoi((str_vec[8]).c_str());
-
-    string tmp;
-    vector<string>::iterator iter;
-
-    exon_starts = vector<_chr_coor>(exon_cnt);
-    exon_ends = vector<_chr_coor>(exon_cnt);
-
-    vector<string> pos;
-    pos = delimiter(str_vec[9], ',', exon_cnt);
-    int i = 0;
-    for(iter=pos.begin(); iter != pos.end(); iter++){
-      exon_starts[i++] = atoi((*iter).c_str());
-    }
-
-    pos = delimiter(str_vec[10], ',', exon_cnt);
-    i = 0;
-    for(iter=pos.begin(); iter != pos.end(); iter++){
-      exon_ends[i++] = atoi((*iter).c_str());
-    }
-  }
-}
-*/
-
 bool if_some_state_on(const vector<bool>& state){
   int iso_num = state.size();
   for(int i = 0; i < iso_num; i++){
