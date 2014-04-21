@@ -115,7 +115,6 @@ int main(int argc, char**argv)
 
   string in_anno_name;
   string in_rdmap_name;
-  string out_nurd_name;
   string out_expr_name;
 
   unsigned int anno_choice = 2; // choice of annotation: 1: refflat, 2: GTF
@@ -233,9 +232,8 @@ int main(int argc, char**argv)
     return 1;
   }
 
-  out_nurd_name = argu_parse_result["O"] + in_rdmap_name_no_dir + ".nurd";
-  output_with_time(cout, "sam file: " + out_nurd_name + "\n");
-  out_expr_name = out_nurd_name + ".all_expr";
+  output_with_time(cout, "sam file: " + in_rdmap_name + "\n");
+  out_expr_name = argu_parse_result["O"] + in_rdmap_name_no_dir + ".nurd";
   output_with_time(cout, "expression file: " + out_expr_name + "\n");
   
   clock_t global_start, global_end;
