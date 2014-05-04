@@ -275,7 +275,7 @@ int main(int argc, char**argv)
   ss.str("");
   local_start = local_end;
 
-  ss<<"expression done!"<<endl;
+  ss<<"expression estimating done!"<<endl;
   output_with_time(cout, ss.str());
   ss.str("");
 
