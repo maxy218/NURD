@@ -41,6 +41,7 @@ size_t get_exon_rd_cnt(unordered_map<string, gene_info> & map_g_info, ifstream &
     size_t & tot_valid_rd_cnt, vector<double> & GBC);
 
 void express_estimate(unordered_map<string, gene_info> & map_g_info,
-    size_t tot_valid_rd_cnt, double alpha, const vector<double> & GBC, ofstream& out);
+    size_t tot_valid_rd_cnt, double alpha, const vector<double> & GBC,
+    ofstream& out_expr_rpkm, ofstream& out_expr_rdcnt);
 
 #endif // ALGORITHM_H_INCLUDED

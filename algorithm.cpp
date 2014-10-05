@@ -690,40 +690,52 @@ static void get_LBC_matrix(gene_info& g){
 }
 
 void express_estimate(unordered_map<string, gene_info> & map_g_info, 
-    size_t tot_valid_rd_cnt, double alpha, const vector<double> & GBC, ofstream& out){
+    size_t tot_valid_rd_cnt, double alpha, const vector<double> & GBC,
+    ofstream& out_expr_rpkm, ofstream& out_expr_rdcnt){
   unordered_map<string, gene_info>::iterator iter_map_g_info = map_g_info.begin();
   for(; iter_map_g_info != map_g_info.end(); ++iter_map_g_info){
     gene_info & g = iter_map_g_info -> second;
 
     g.is_valid = g.if_valid();
     if(g.is_valid == 1){
-      out << g.gene_name << "\t" << g.iso_num << "\t" << g.tot_rd_cnt << "\t";
+      out_expr_rpkm << g.gene_name << "\t" << g.iso_num << "\t" << g.tot_rd_cnt << "\t";
+      out_expr_rdcnt << g.gene_name << "\t" << g.iso_num << "\t" << g.tot_rd_cnt << "\t";
       for(size_t i = 0; i < g.iso_num; i++){
-        out << g.iso_name[i] <<",";
+        out_expr_rpkm << g.iso_name[i] <<",";
+        out_expr_rdcnt << g.iso_name[i] <<",";
       }
-      out << "\t";
+      out_expr_rpkm << "\t";
+      out_expr_rdcnt << "\t";
       for(size_t j = 0; j < g.iso_num; j++){
-      out << 0 << ",";
+      out_expr_rpkm << 0 << ",";
+      out_expr_rdcnt << 0 << ",";
       }
-      out << "\t" << 0; // total Theta, total expression.
-      out << "\n";
+      out_expr_rpkm << "\t" << 0; // total Theta, total expression.
+      out_expr_rpkm << "\n";
+      out_expr_rdcnt << "\t" << 0; // total Theta, total expression.
+      out_expr_rdcnt << "\n";
     }
     else if(g.is_valid == 0){
-      out << g.gene_name << "\t" << g.iso_num << "\t" << g.tot_rd_cnt << "\t";
+      out_expr_rpkm << g.gene_name << "\t" << g.iso_num << "\t" << g.tot_rd_cnt << "\t";
+      out_expr_rdcnt << g.gene_name << "\t" << g.iso_num << "\t" << g.tot_rd_cnt << "\t";
       for(size_t i = 0; i < g.iso_num; i++){
-        out << g.iso_name[i] << ",";
+        out_expr_rpkm << g.iso_name[i] << ",";
+        out_expr_rdcnt << g.iso_name[i] << ",";
       }
-      out << "\t";
+      out_expr_rpkm << "\t";
+      out_expr_rdcnt << "\t";
 
     //////  expression estimation
       max_likelihood(g, alpha, GBC);
       double tot_theta = 0.0;
       for(size_t ii = 0; ii < g.iso_num; ii++){
-        out << g.theta[ii]*g.tot_rd_cnt/tot_valid_rd_cnt*1e9 << ",";
+        out_expr_rpkm << g.theta[ii]*g.tot_rd_cnt/tot_valid_rd_cnt*1e9 << ",";
+        out_expr_rdcnt << g.theta[ii]*g.tot_rd_cnt*g.iso_len[ii] << ",";
         tot_theta += g.theta[ii];
       }
-      out << "\t" << tot_theta*g.tot_rd_cnt/tot_valid_rd_cnt*1e9;
-      out << "\n";
+      out_expr_rpkm << "\t" << tot_theta*g.tot_rd_cnt/tot_valid_rd_cnt*1e9;
+      out_expr_rpkm << "\n";
+      out_expr_rdcnt << "\n";
     }
   }
 }

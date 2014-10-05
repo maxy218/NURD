@@ -40,7 +40,7 @@ using namespace boost;
 void usage(ostream & out)
 {
   out << "NURD is a tool to estimate isoform expression with RNA-Seq data." << endl;
-  out << "Version: 1.1.0" << endl;
+  out << "Version: 1.1.1" << endl;
   out << "========================================" << endl;
   out << "Usage:\t" << "NURD [options] <-G annotation.gtf>|<-R annotation.refflat> <-S mapping_file.sam>" << endl;
   out << "\t" << "-G: annotation.gtf: gene annotation in gtf format." << endl;
@@ -111,12 +111,14 @@ int main(int argc, char**argv)
 
   ifstream in_anno; // annotation file.
   ifstream in_rdmap; // reads mapping file.
-  ofstream out_expr; // expression estimation file.
+  ofstream out_expr_rpkm; // expression estimation file of rpkm data.
+  ofstream out_expr_rdcnt; // expression estimation file of read count data.
 
   string in_anno_name;
   string in_rdmap_name;
   string out_nurd_name;
-  string out_expr_name;
+  string out_expr_rpkm_name;
+  string out_expr_rdcnt_name;
 
   unsigned int anno_choice = 2; // choice of annotation: 1: refflat, 2: GTF
   double alpha = 0.5; // weight of GBC and LBC. 0.5 as default.
@@ -188,7 +190,7 @@ int main(int argc, char**argv)
     if( argu_parse_result.find("S") == argu_parse_result.end() )
     {
       throw runtime_error("no mapping file is specified.");
-    }
+  }
     else
     {
       in_rdmap_name = argu_parse_result["S"];
@@ -235,8 +237,11 @@ int main(int argc, char**argv)
 
   out_nurd_name = argu_parse_result["O"] + in_rdmap_name_no_dir + ".nurd";
   output_with_time(cout, "sam file: " + out_nurd_name + "\n");
-  out_expr_name = out_nurd_name + ".all_expr";
-  output_with_time(cout, "expression file: " + out_expr_name + "\n");
+  out_expr_rpkm_name = out_nurd_name + ".rpkm";
+  out_expr_rdcnt_name = out_nurd_name + ".rdcnt";
+  output_with_time(cout, "expression result:\n");
+  output_with_time(cout, "1: rpkm:            " + out_expr_rpkm_name + "\n");
+  output_with_time(cout, "2: isoform readcnt: " + out_expr_rdcnt_name + "\n");
   
   clock_t global_start, global_end;
   clock_t local_start, local_end;
@@ -261,15 +266,23 @@ int main(int argc, char**argv)
   ss.str("");
   local_start = local_end;
 
-  out_expr.open(out_expr_name.c_str());
-  if(! out_expr.is_open()){
-    ss << "Cannot open file: " << out_expr_name << endl;
+  out_expr_rpkm.open(out_expr_rpkm_name.c_str());
+  if(! out_expr_rpkm.is_open()){
+    ss << "Cannot open file: " << out_expr_rpkm_name << endl;
     output_with_time(cerr, ss.str());
     ss.str("");
     return 1;
   }
 
-  express_estimate(map_g_info, tot_valid_rd_cnt, alpha, GBC, out_expr);
+  out_expr_rdcnt.open(out_expr_rdcnt_name.c_str());
+  if(! out_expr_rdcnt.is_open()){
+    ss << "Cannot open file: " << out_expr_rdcnt_name << endl;
+    output_with_time(cerr, ss.str());
+    ss.str("");
+    return 1;
+  }
+
+  express_estimate(map_g_info, tot_valid_rd_cnt, alpha, GBC, out_expr_rpkm, out_expr_rdcnt);
   local_end = clock();
   ss << "expression estimating time: ";
   ss << ((double)local_end - local_start)/CLOCKS_PER_SEC << " seconds." << endl;
